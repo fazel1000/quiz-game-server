@@ -1,46 +1,37 @@
 using UnityEngine;
-using TMPro;
 using NativeWebSocket;
 using System.Text;
-using System;
+using TMPro;
 
 public class WebSocketClient : MonoBehaviour
 {
+    public WebSocket ws;
+
+    public GameUIManager ui;
+
+    [Header("Player")]
+    public string playerName;
+
+    [Header("Game UI")]
     public TextMeshProUGUI questionText;
     public TextMeshProUGUI timerText;
 
-    public TextMeshProUGUI optA;
-    public TextMeshProUGUI optB;
-    public TextMeshProUGUI optC;
-    public TextMeshProUGUI optD;
+    public TextMeshProUGUI optA, optB, optC, optD;
 
-    public TextMeshProUGUI player1Name;
-    public TextMeshProUGUI player2Name;
-
-    public TextMeshProUGUI player1Score;
-    public TextMeshProUGUI player2Score;
-
-    public GameObject matchmakingUI;
-    public GameObject questionUI;
-
-    WebSocket ws;
     float timer = 10;
-    bool isTimerRunning = false;
+    bool timerRunning;
+
+    bool answeredThisQuestion = false;
 
     async void Start()
     {
         ws = new WebSocket("ws://localhost:8081/ws");
 
-        ws.OnOpen += () =>
-        {
-            Debug.Log("Connected");
-        };
+        ws.OnOpen += () => Debug.Log("Connected");
 
         ws.OnMessage += (bytes) =>
         {
             string msg = Encoding.UTF8.GetString(bytes);
-            Debug.Log(msg);
-
             HandleMessage(msg);
         };
 
@@ -53,52 +44,76 @@ public class WebSocketClient : MonoBehaviour
         ws?.DispatchMessageQueue();
 #endif
 
-        if (isTimerRunning)
+        if (timerRunning)
         {
             timer -= Time.deltaTime;
             timerText.text = Mathf.Ceil(timer).ToString();
 
             if (timer <= 0)
             {
-                isTimerRunning = false;
+                timerRunning = false;
+                SendTimeout();
             }
         }
     }
 
+    // ---------------- JOIN ----------------
+    public async void JoinGame()
+    {
+        string json = "{\"type\":\"join\",\"name\":\"" + playerName + "\"}";
+        await ws.SendText(json);
+    }
+
+    // ---------------- MESSAGE ----------------
     void HandleMessage(string msg)
     {
         if (msg.Contains("match"))
         {
-            matchmakingUI.SetActive(false);
-            questionUI.SetActive(true);
+            ui.StartGame();
         }
 
         if (msg.Contains("question"))
         {
-            // ساده (فعلاً بدون JSON حرفه‌ای)
-            questionText.text = msg;
+            answeredThisQuestion = false;
 
             timer = 10;
-            isTimerRunning = true;
+            timerRunning = true;
+
+            questionText.text = msg;
         }
 
-        if (msg.Contains("correct") || msg.Contains("wrong"))
+        if (msg.Contains("correct"))
         {
-            Debug.Log("Score updated");
+            Debug.Log("Correct Answer");
+        }
+
+        if (msg.Contains("wrong"))
+        {
+            Debug.Log("Wrong Answer");
         }
 
         if (msg.Contains("end"))
         {
-            Debug.Log("Game Ended");
+            Debug.Log("Game End");
         }
     }
 
+    // ---------------- ANSWER ----------------
     public async void SendAnswer(string answer)
     {
-        if (ws.State == WebSocketState.Open)
-        {
-            string json = "{\"answer\":\"" + answer + "\"}";
-            await ws.SendText(json);
-        }
+        if (answeredThisQuestion) return; // ⭐ فقط یک جواب
+
+        answeredThisQuestion = true;
+
+        string json = "{\"answer\":\"" + answer + "\"}";
+        await ws.SendText(json);
+    }
+
+    // ---------------- TIMEOUT ----------------
+    void SendTimeout()
+    {
+        answeredThisQuestion = true;
+
+        Debug.Log("No answer → next question");
     }
 }

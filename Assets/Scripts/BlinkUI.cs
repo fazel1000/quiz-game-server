@@ -1,24 +1,39 @@
 using UnityEngine;
+using UnityEngine.UI;
 
 public class BlinkUI : MonoBehaviour
 {
-    public GameObject blinkObject;
-    bool state = true;
+    [Header("Drag UI Image Here")]
+    public Image blinkImage;
+
+    public float speed = 0.5f;
+    bool state;
 
     void Start()
     {
-        InvokeRepeating("Blink", 0.5f, 0.5f);
+        if (blinkImage != null)
+            blinkImage.enabled = false;
     }
 
-    void Blink()
+    public void StartBlink()
     {
+        CancelInvoke();
+        InvokeRepeating(nameof(Toggle), speed, speed);
+    }
+
+    void Toggle()
+    {
+        if (blinkImage == null) return;
+
         state = !state;
-        blinkObject.SetActive(state);
+        blinkImage.enabled = state;
     }
 
     public void StopBlink()
     {
         CancelInvoke();
-        blinkObject.SetActive(false);
+
+        if (blinkImage != null)
+            blinkImage.enabled = false;
     }
 }
