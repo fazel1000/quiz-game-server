@@ -3,12 +3,13 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Networking;
 using TMPro;
+using RTLTMPro;
 
 public class QuizManager : MonoBehaviour
 {
     [Header("UI")]
-    public TextMeshProUGUI questionText;
-    public TextMeshProUGUI[] optionTexts;
+    public RTLTextMeshPro questionText;
+    public RTLTextMeshPro[] optionTexts;
 
     [Header("Supabase")]
     public string supabaseUrl = "https://tjdfrhuwekdlrokkzamm.supabase.co/rest/v1/questions?select=*";
@@ -76,41 +77,49 @@ public class QuizManager : MonoBehaviour
         optionTexts[3].text = q.option_d;
     }
 
-    // 🟢 اینو مستقیم از Button صدا می‌زنی
     public void AnswerA()
     {
-        CheckAnswer(optionTexts[0].text);
+        CheckAnswer(0);
     }
 
     public void AnswerB()
     {
-        CheckAnswer(optionTexts[1].text);
+        CheckAnswer(1);
     }
 
     public void AnswerC()
     {
-        CheckAnswer(optionTexts[2].text);
+        CheckAnswer(2);
     }
 
     public void AnswerD()
     {
-        CheckAnswer(optionTexts[3].text);
+        CheckAnswer(3);
     }
 
-    void CheckAnswer(string selected)
+    void CheckAnswer(int selectedIndex)
     {
         if (currentIndex >= questions.Count) return;
 
         Question q = questions[currentIndex];
 
-        if (selected == q.answer)
+        // 🔑 مقادیر از Database (نه از UI)
+        string[] options = new string[] { q.option_a, q.option_b, q.option_c, q.option_d };
+        string selectedAnswer = options[selectedIndex].Trim();
+        string correctAnswer = q.answer.Trim();
+
+        // Debug
+        Debug.Log($"Selected: '{selectedAnswer}' | Correct: '{correctAnswer}' | Match: {selectedAnswer == correctAnswer}");
+
+        if (selectedAnswer == correctAnswer)
         {
+            Debug.Log("✅ Correct Answer!");
             currentIndex++;
             ShowQuestion();
         }
         else
         {
-            Debug.Log("Wrong Answer!");
+            Debug.Log("❌ Wrong Answer!");
         }
     }
 }
