@@ -1,10 +1,14 @@
 [System.Serializable]
 public class Question
 {
+    public int id;
     public string question;
-    public string option_a;
-    public string option_b;
-    public string option_c;
-    public string option_d;
-    public string answer;
+
+    public string A;
+    public string B;
+    public string C;
+    public string D;
+
+    public string correct;
+    public int score;
 }

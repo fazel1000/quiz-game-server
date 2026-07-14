@@ -1,133 +1,358 @@
+using System;
 using System.Collections;
+using System.IO;
+using System.Net;
+using System.Text;
 using UnityEngine;
 using UnityEngine.Networking;
 using TMPro;
+using RTLTMPro;
 
 public class PlayerManager : MonoBehaviour
 {
-    [Header("Supabase")]
-    public string supabaseUrl = "https://tjdfrhuwekdlrokkzamm.supabase.co/rest/v1/online_players";
-    public string apiKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRqZGZyaHV3ZWtkbHJva2t6YW1tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4MDYzMzEsImV4cCI6MjA5ODM4MjMzMX0.G-DqziwuxhBYG-mmPRVqzq3hn-DcoUx9c4hdwdfpx3E";  // ⚠️ اینو صحیح کن
+    [Header("Server")]
+    public string serverBaseUrl = "https://fazel1000.pythonanywhere.com";
 
-    private string playerName;
-    private string sessionId;
+    [Header("UI")]
+    public TMP_InputField nameInput;
+    public RTLTextMeshPro statusText;
+
+    public string PlayerName { get; private set; }
+    public string SessionId { get; private set; }
+
+    private bool isRegistered = false;
+    private bool isSearching = false;
+    private bool hasLoggedOut = false;
+
+    private Action<int, string> onMatchFound;
+    private Coroutine heartbeatCoroutine;
 
     void Start()
     {
-        // ID منحصر برفرد برای این دستگاه
-        sessionId = System.Guid.NewGuid().ToString();
-        
-        // نام بازیکن تصادفی
-        GenerateRandomPlayerName();
-        
-        // ثبت بازیکن در Database
-        RegisterPlayer();
+        SessionId = PlayerPrefs.GetString("session_id", "");
+
+        if (string.IsNullOrEmpty(SessionId))
+        {
+            SessionId = Guid.NewGuid().ToString();
+            PlayerPrefs.SetString("session_id", SessionId);
+        }
+
+        PlayerName = PlayerPrefs.GetString("player_name", "");
+
+        if (nameInput != null && !string.IsNullOrEmpty(PlayerName))
+        {
+            nameInput.text = PlayerName;
+        }
     }
 
-    void GenerateRandomPlayerName()
+    public void OnConfirmNameClicked()
     {
-        int randomNumber = Random.Range(1, 10000);
-        playerName = $"Player {randomNumber:D2}";
-        Debug.Log($"✅ Generated Player Name: {playerName}");
+        string inputName = nameInput.text.Trim();
+
+        if (string.IsNullOrEmpty(inputName))
+        {
+            SetStatus("اسم را وارد کن");
+            return;
+        }
+
+        PlayerName = inputName;
+        PlayerPrefs.SetString("player_name", PlayerName);
+
+        hasLoggedOut = false;
+        StartCoroutine(RegisterPlayer());
     }
 
-    void RegisterPlayer()
+    IEnumerator RegisterPlayer()
     {
-        StartCoroutine(AddPlayerToDatabase());
-    }
+        string url = serverBaseUrl + "/register_player";
 
-    IEnumerator AddPlayerToDatabase()
-    {
-        // ✅ JSON صحیح (snake_case)
-        string jsonData = $@"{{
-            ""player_name"": ""{playerName}"",
-            ""session_id"": ""{sessionId}"",
-            ""is_online"": true
-        }}";
+        string json = "{"
+            + "\"player_name\":\"" + EscapeJson(PlayerName) + "\","
+            + "\"session_id\":\"" + EscapeJson(SessionId) + "\""
+            + "}";
 
-        Debug.Log($"📤 Sending JSON: {jsonData}");
-
-        UnityWebRequest request = new UnityWebRequest(supabaseUrl, "POST");
-        request.uploadHandler = new UploadHandlerRaw(System.Text.Encoding.UTF8.GetBytes(jsonData));
+        UnityWebRequest request = new UnityWebRequest(url, "POST");
+        request.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(json));
         request.downloadHandler = new DownloadHandlerBuffer();
 
-        // Headers
-        request.SetRequestHeader("apikey", apiKey);
-        request.SetRequestHeader("Authorization", "Bearer " + apiKey);
         request.SetRequestHeader("Content-Type", "application/json");
-        request.SetRequestHeader("Prefer", "return=representation");
 
         yield return request.SendWebRequest();
 
-        // ✅ بهتر Debug
         if (request.result == UnityWebRequest.Result.Success)
         {
-            Debug.Log($"✅ Player '{playerName}' registered successfully!");
-            Debug.Log($"Response: {request.downloadHandler.text}");
+            RegisterResponse response = JsonUtility.FromJson<RegisterResponse>(request.downloadHandler.text);
+
+            if (response.status == "ok")
+            {
+                isRegistered = true;
+                hasLoggedOut = false;
+                SetStatus("اسم ثبت شد");
+
+                StartHeartbeat();
+
+                Debug.Log("Player Registered: " + PlayerName);
+            }
+            else
+            {
+                SetStatus("خطا در ثبت اسم");
+                Debug.LogError(request.downloadHandler.text);
+            }
         }
         else
         {
-            Debug.LogError($"❌ Error Code: {request.responseCode}");
-            Debug.LogError($"❌ Error Message: {request.error}");
-            Debug.LogError($"❌ Response: {request.downloadHandler.text}");
+            SetStatus("خطا در اتصال");
+            Debug.LogError(request.error);
         }
     }
 
-    // وقتی بازیکن از برنامه خارج شد
-    void OnApplicationQuit()
+    void StartHeartbeat()
     {
-        RemovePlayer();
-    }
-
-    void RemovePlayer()
-    {
-        StartCoroutine(DeletePlayerFromDatabase());
-    }
-
-    IEnumerator DeletePlayerFromDatabase()
-    {
-        string deleteUrl = $"{supabaseUrl}?session_id=eq.{sessionId}";
-
-        UnityWebRequest request = UnityWebRequest.Delete(deleteUrl);
-
-        request.SetRequestHeader("apikey", apiKey);
-        request.SetRequestHeader("Authorization", "Bearer " + apiKey);
-
-        yield return request.SendWebRequest();
-
-        if (request.result == UnityWebRequest.Result.Success)
+        if (heartbeatCoroutine != null)
         {
-            Debug.Log($"✅ Player '{playerName}' removed from online list!");
+            StopCoroutine(heartbeatCoroutine);
+        }
+
+        heartbeatCoroutine = StartCoroutine(HeartbeatLoop());
+    }
+
+    IEnumerator HeartbeatLoop()
+    {
+        while (isRegistered)
+        {
+            yield return SendHeartbeat();
+            yield return new WaitForSeconds(10f);
         }
     }
 
-    // برای بروزرسانی آخرین فعالیت
-    public void UpdatePlayerActivity()
+    IEnumerator SendHeartbeat()
     {
-        StartCoroutine(UpdateActivityInDatabase());
-    }
+        string url = serverBaseUrl + "/heartbeat_player";
 
-    IEnumerator UpdateActivityInDatabase()
-    {
-        string updateUrl = $"{supabaseUrl}?session_id=eq.{sessionId}";
+        string json = "{"
+            + "\"session_id\":\"" + EscapeJson(SessionId) + "\""
+            + "}";
 
-        string jsonData = $@"{{
-            ""last_activity"": ""{System.DateTime.UtcNow:O}""
-        }}";
-
-        UnityWebRequest request = new UnityWebRequest(updateUrl, "PATCH");
-        request.uploadHandler = new UploadHandlerRaw(System.Text.Encoding.UTF8.GetBytes(jsonData));
+        UnityWebRequest request = new UnityWebRequest(url, "POST");
+        request.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(json));
         request.downloadHandler = new DownloadHandlerBuffer();
 
-        request.SetRequestHeader("apikey", apiKey);
-        request.SetRequestHeader("Authorization", "Bearer " + apiKey);
+        request.SetRequestHeader("Content-Type", "application/json");
+
+        yield return request.SendWebRequest();
+    }
+
+    public void StartFindMatch(Action<int, string> callback)
+    {
+        if (isSearching)
+            return;
+
+        onMatchFound = callback;
+        StartCoroutine(FindMatchProcess());
+    }
+
+    IEnumerator FindMatchProcess()
+    {
+        if (string.IsNullOrEmpty(PlayerName))
+        {
+            SetStatus("اول اسم را وارد کن");
+            yield break;
+        }
+
+        if (!isRegistered)
+        {
+            yield return RegisterPlayer();
+        }
+
+        isSearching = true;
+        SetStatus("در حال پیدا کردن حریف...");
+
+        yield return SendFindMatchRequest();
+
+        while (isSearching)
+        {
+            yield return new WaitForSeconds(2f);
+            yield return SendCheckMatchRequest();
+        }
+    }
+
+    IEnumerator SendFindMatchRequest()
+    {
+        string url = serverBaseUrl + "/find_match";
+
+        string json = "{"
+            + "\"player_name\":\"" + EscapeJson(PlayerName) + "\","
+            + "\"session_id\":\"" + EscapeJson(SessionId) + "\""
+            + "}";
+
+        UnityWebRequest request = new UnityWebRequest(url, "POST");
+        request.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(json));
+        request.downloadHandler = new DownloadHandlerBuffer();
+
         request.SetRequestHeader("Content-Type", "application/json");
 
         yield return request.SendWebRequest();
 
         if (request.result == UnityWebRequest.Result.Success)
         {
-            Debug.Log($"✅ Activity updated!");
+            MatchResponse response = JsonUtility.FromJson<MatchResponse>(request.downloadHandler.text);
+            HandleMatchResponse(response);
         }
+        else
+        {
+            isSearching = false;
+            SetStatus("خطا در جستجوی حریف");
+            Debug.LogError(request.error);
+        }
+    }
+
+    IEnumerator SendCheckMatchRequest()
+    {
+        string url = serverBaseUrl + "/check_match?session_id=" + UnityWebRequest.EscapeURL(SessionId);
+
+        UnityWebRequest request = UnityWebRequest.Get(url);
+
+        yield return request.SendWebRequest();
+
+        if (request.result == UnityWebRequest.Result.Success)
+        {
+            MatchResponse response = JsonUtility.FromJson<MatchResponse>(request.downloadHandler.text);
+            HandleMatchResponse(response);
+        }
+        else
+        {
+            isSearching = false;
+            SetStatus("خطا در بررسی مسابقه");
+            Debug.LogError(request.error);
+        }
+    }
+
+    void HandleMatchResponse(MatchResponse response)
+    {
+        if (response.status == "match_found")
+        {
+            isSearching = false;
+
+            SetStatus("حریف پیدا شد: " + response.opponent_name);
+
+            if (onMatchFound != null)
+            {
+                onMatchFound.Invoke(response.match_id, response.opponent_name);
+            }
+        }
+        else if (response.status == "waiting")
+        {
+            SetStatus("منتظر حریف...");
+        }
+        else
+        {
+            SetStatus("خطا");
+        }
+    }
+
+    void SendLogoutBlocking()
+    {
+        if (hasLoggedOut)
+            return;
+
+        if (string.IsNullOrEmpty(SessionId))
+            return;
+
+        hasLoggedOut = true;
+
+        try
+        {
+            string url = serverBaseUrl + "/logout_player";
+
+            string json = "{"
+                + "\"session_id\":\"" + EscapeJson(SessionId) + "\""
+                + "}";
+
+            byte[] body = Encoding.UTF8.GetBytes(json);
+
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
+            request.Method = "POST";
+            request.ContentType = "application/json";
+            request.ContentLength = body.Length;
+            request.Timeout = 3000;
+
+            using (Stream stream = request.GetRequestStream())
+            {
+                stream.Write(body, 0, body.Length);
+            }
+
+            using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
+            {
+                Debug.Log("Player Logged Out");
+            }
+        }
+        catch (Exception e)
+        {
+            Debug.Log("Logout failed: " + e.Message);
+        }
+    }
+
+    void OnApplicationQuit()
+    {
+        isRegistered = false;
+        SendLogoutBlocking();
+    }
+
+    void OnDestroy()
+    {
+        if (Application.isPlaying)
+        {
+            isRegistered = false;
+            SendLogoutBlocking();
+        }
+    }
+
+    void OnApplicationPause(bool pause)
+    {
+        if (pause)
+        {
+            isRegistered = false;
+            SendLogoutBlocking();
+        }
+        else
+        {
+            if (!string.IsNullOrEmpty(PlayerName))
+            {
+                hasLoggedOut = false;
+                StartCoroutine(RegisterPlayer());
+            }
+        }
+    }
+
+    void SetStatus(string message)
+    {
+        if (statusText != null)
+        {
+            statusText.text = message;
+        }
+
+        Debug.Log(message);
+    }
+
+    string EscapeJson(string value)
+    {
+        return value.Replace("\\", "\\\\").Replace("\"", "\\\"");
+    }
+
+    [Serializable]
+    public class RegisterResponse
+    {
+        public string status;
+        public string message;
+        public int player_id;
+    }
+
+    [Serializable]
+    public class MatchResponse
+    {
+        public string status;
+        public string message;
+        public int match_id;
+        public string opponent_name;
     }
 }

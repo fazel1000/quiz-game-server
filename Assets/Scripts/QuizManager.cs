@@ -2,7 +2,6 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Networking;
-using TMPro;
 using RTLTMPro;
 
 public class QuizManager : MonoBehaviour
@@ -10,25 +9,32 @@ public class QuizManager : MonoBehaviour
     [Header("UI")]
     public RTLTextMeshPro questionText;
     public RTLTextMeshPro[] optionTexts;
+    public RTLTextMeshPro scoreText;
 
-    [Header("Supabase")]
-    public string supabaseUrl = "https://tjdfrhuwekdlrokkzamm.supabase.co/rest/v1/questions?select=*";
-    public string apiKey = "YOUR_ANON_KEY";
+    [Header("Server")]
+    public string serverBaseUrl = "https://fazel1000.pythonanywhere.com";
 
     private List<Question> questions = new List<Question>();
     private int currentIndex = 0;
+    private int playerScore = 0;
+    private int currentMatchId = 0;
 
-    public void StartQuiz()
+    public void StartQuiz(int matchId)
     {
+        currentMatchId = matchId;
+        currentIndex = 0;
+        playerScore = 0;
+
+        UpdateScoreText();
+
         StartCoroutine(LoadQuestions());
     }
 
     IEnumerator LoadQuestions()
     {
-        UnityWebRequest request = UnityWebRequest.Get(supabaseUrl);
+        string url = serverBaseUrl + "/match_questions/" + currentMatchId;
 
-        request.SetRequestHeader("apikey", apiKey);
-        request.SetRequestHeader("Authorization", "Bearer " + apiKey);
+        UnityWebRequest request = UnityWebRequest.Get(url);
 
         yield return request.SendWebRequest();
 
@@ -36,20 +42,17 @@ public class QuizManager : MonoBehaviour
         {
             string json = request.downloadHandler.text;
 
-            string wrappedJson = "{ \"items\": " + json + "}";
+            Question[] loadedQuestions = JsonHelper.FromJson<Question>(json);
+            questions = new List<Question>(loadedQuestions);
 
-            QuestionListWrapper wrapper = JsonUtility.FromJson<QuestionListWrapper>(wrappedJson);
+            Debug.Log("Questions Loaded: " + questions.Count);
 
-            questions = new List<Question>(wrapper.items);
-
-            Debug.Log("Loaded Questions: " + questions.Count);
-
-            currentIndex = 0;
             ShowQuestion();
         }
         else
         {
-            Debug.LogError(request.error);
+            Debug.LogError("Server Error: " + request.error);
+            questionText.text = "خطا در اتصال به سرور";
         }
     }
 
@@ -57,13 +60,19 @@ public class QuizManager : MonoBehaviour
     {
         if (questions == null || questions.Count == 0)
         {
-            questionText.text = "No Questions Found!";
+            questionText.text = "سوالی پیدا نشد";
             return;
         }
 
         if (currentIndex >= questions.Count)
         {
-            questionText.text = "Quiz Finished!";
+            questionText.text = "پایان مسابقه\nامتیاز شما: " + playerScore;
+
+            optionTexts[0].text = "";
+            optionTexts[1].text = "";
+            optionTexts[2].text = "";
+            optionTexts[3].text = "";
+
             return;
         }
 
@@ -71,55 +80,60 @@ public class QuizManager : MonoBehaviour
 
         questionText.text = q.question;
 
-        optionTexts[0].text = q.option_a;
-        optionTexts[1].text = q.option_b;
-        optionTexts[2].text = q.option_c;
-        optionTexts[3].text = q.option_d;
+        optionTexts[0].text = q.A;
+        optionTexts[1].text = q.B;
+        optionTexts[2].text = q.C;
+        optionTexts[3].text = q.D;
     }
 
     public void AnswerA()
     {
-        CheckAnswer(0);
+        CheckAnswer("A");
     }
 
     public void AnswerB()
     {
-        CheckAnswer(1);
+        CheckAnswer("B");
     }
 
     public void AnswerC()
     {
-        CheckAnswer(2);
+        CheckAnswer("C");
     }
 
     public void AnswerD()
     {
-        CheckAnswer(3);
+        CheckAnswer("D");
     }
 
-    void CheckAnswer(int selectedIndex)
+    void CheckAnswer(string selectedAnswer)
     {
-        if (currentIndex >= questions.Count) return;
+        if (currentIndex >= questions.Count)
+            return;
 
         Question q = questions[currentIndex];
 
-        // 🔑 مقادیر از Database (نه از UI)
-        string[] options = new string[] { q.option_a, q.option_b, q.option_c, q.option_d };
-        string selectedAnswer = options[selectedIndex].Trim();
-        string correctAnswer = q.answer.Trim();
-
-        // Debug
-        Debug.Log($"Selected: '{selectedAnswer}' | Correct: '{correctAnswer}' | Match: {selectedAnswer == correctAnswer}");
-
-        if (selectedAnswer == correctAnswer)
+        if (selectedAnswer == q.correct)
         {
-            Debug.Log("✅ Correct Answer!");
-            currentIndex++;
-            ShowQuestion();
+            playerScore += q.score;
+            Debug.Log("Correct +" + q.score);
         }
         else
         {
-            Debug.Log("❌ Wrong Answer!");
+            playerScore -= 10;
+            Debug.Log("Wrong -10");
+        }
+
+        currentIndex++;
+        UpdateScoreText();
+        ShowQuestion();
+    }
+
+    void UpdateScoreText()
+    {
+        if (scoreText != null)
+        {
+            scoreText.text = "امتیاز: " + playerScore;
         }
     }
 }
