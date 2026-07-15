@@ -212,5 +212,164 @@
       "arabicAudios": [],
       "persianAudios": []
     }
+  ],
+  "audioTracks": [
+    {
+      "speakerId": "persian_narrator",
+      "language": "persian",
+      "audioPath": "Audio/Persian/prayer_01",
+      "segments": [
+        {
+          "partId": 1,
+          "startTime": 0.0,
+          "endTime": 11
+        },
+        {
+          "partId": 2,
+          "startTime": 11,
+          "endTime": 24
+        },
+        {
+          "partId": 3,
+          "startTime": 24,
+          "endTime": 34
+        },
+        {
+          "partId": 4,
+          "startTime": 34,
+          "endTime": 65
+        },
+        {
+          "partId": 5,
+          "startTime": 65,
+          "endTime": 91
+        },
+        {
+          "partId": 6,
+          "startTime": 91,
+          "endTime": 151
+        },
+        {
+          "partId": 7,
+          "startTime": 151,
+          "endTime": 156
+        },
+        {
+          "partId": 8,
+          "startTime": 156,
+          "endTime": 177
+        },
+        {
+          "partId": 9,
+          "startTime": 177,
+          "endTime": 125
+        },
+        {
+          "partId": 10,
+          "startTime": 125,
+          "endTime": 137
+        },
+        {
+          "partId": 11,
+          "startTime": 137,
+          "endTime": 156
+        },
+        {
+          "partId": 12,
+          "startTime": 156,
+          "endTime": 177
+        },
+        {
+          "partId": 13,
+          "startTime": 177,
+          "endTime": 214
+        },
+        {
+          "partId": 14,
+          "startTime": 214,
+          "endTime": 248
+        },
+        {
+          "partId": 15,
+          "startTime": 248,
+          "endTime": 281
+        },
+        {
+          "partId": 16,
+          "startTime": 281,
+          "endTime": 299
+        },
+        {
+          "partId": 17,
+          "startTime": 299,
+          "endTime": 339
+        },
+        {
+          "partId": 18,
+          "startTime": 339,
+          "endTime": 355
+        },
+        {
+          "partId": 19,
+          "startTime": 355,
+          "endTime": 374
+        },
+        {
+          "partId": 20,
+          "startTime": 374,
+          "endTime": 387
+        },
+        {
+          "partId": 21,
+          "startTime": 387,
+          "endTime": 419
+        },
+        {
+          "partId": 22,
+          "startTime": 419,
+          "endTime": 434
+        },
+        {
+          "partId": 23,
+          "startTime": 434,
+          "endTime": 457
+        },
+        {
+          "partId": 24,
+          "startTime": 457,
+          "endTime": 488
+        },
+        {
+          "partId": 25,
+          "startTime": 488,
+          "endTime": 530
+        },
+        {
+          "partId": 26,
+          "startTime": 530,
+          "endTime": 582
+        },
+        {
+          "partId": 27,
+          "startTime": 582,
+          "endTime": 622
+        },
+        {
+          "partId": 28,
+          "startTime": 622,
+          "endTime": 655
+        },
+        {
+          "partId": 29,
+          "startTime": 655,
+          "endTime": 672
+        },
+        {
+          "partId": 30,
+          "startTime": 672,
+          "endTime": 696
+        }
+      ]
+    }
   ]
 }

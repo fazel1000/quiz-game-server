@@ -13,9 +13,6 @@ public class PrayerPageUI : MonoBehaviour
     public ScrollRect prayerScrollRect;
     public RTLTextMeshPro prayerTitleText;
 
-    [Header("Temporary Test Audio")]
-    public AudioClip testArabicClip;
-
     private readonly List<PrayerPartUI> prayerParts = new();
     private int currentPartIndex = -1;
 
@@ -29,11 +26,6 @@ public class PrayerPageUI : MonoBehaviour
     {
         if (audioManager != null)
             audioManager.PlaybackFinished -= OnPlaybackFinished;
-    }
-
-    private void Start()
-    {
-        LoadPrayer(1);
     }
 
     public void LoadPrayer(int prayerId)
@@ -54,22 +46,42 @@ public class PrayerPageUI : MonoBehaviour
 
         if (prayerData == null || prayerData.parts == null)
         {
-            Debug.LogError("اطلاعات JSON معتبر نیست.");
+            Debug.LogError("اطلاعات فایل JSON معتبر نیست.");
             return;
         }
 
         if (prayerTitleText != null)
             prayerTitleText.text = prayerData.title;
 
+        PrayerAudioTrackData arabicTrack =
+            FindTrack(prayerData.audioTracks, "arabic");
+
+        PrayerAudioTrackData persianTrack =
+            FindTrack(prayerData.audioTracks, "persian");
+
+        AudioClip arabicClip = LoadAudioClip(arabicTrack);
+        AudioClip persianClip = LoadAudioClip(persianTrack);
+
         foreach (PrayerPartData partData in prayerData.parts)
         {
-            CreatePart(partData);
+            CreatePart(
+                partData,
+                arabicTrack,
+                arabicClip,
+                persianTrack,
+                persianClip
+            );
         }
 
         StartCoroutine(RefreshContentLayout());
     }
 
-    private void CreatePart(PrayerPartData partData)
+    private void CreatePart(
+        PrayerPartData partData,
+        PrayerAudioTrackData arabicTrack,
+        AudioClip arabicClip,
+        PrayerAudioTrackData persianTrack,
+        AudioClip persianClip)
     {
         PrayerPartUI item =
             Instantiate(prayerPartPrefab, content);
@@ -77,11 +89,84 @@ public class PrayerPageUI : MonoBehaviour
         item.SetAudioManager(audioManager);
         item.SetTexts(partData.arabic, partData.persian);
 
-        // موقتاً برای آزمایش صوت
-        item.arabicClip = testArabicClip;
+        PrayerAudioSegmentData arabicSegment =
+            FindSegment(arabicTrack, partData.id);
+
+        if (arabicSegment != null)
+        {
+            item.arabicClip = arabicClip;
+            item.arabicStartTime = arabicSegment.startTime;
+            item.arabicEndTime = arabicSegment.endTime;
+        }
+
+        PrayerAudioSegmentData persianSegment =
+            FindSegment(persianTrack, partData.id);
+
+        if (persianSegment != null)
+        {
+            item.persianClip = persianClip;
+            item.persianStartTime = persianSegment.startTime;
+            item.persianEndTime = persianSegment.endTime;
+        }
 
         item.Clicked += OnPartClicked;
         prayerParts.Add(item);
+    }
+
+    private PrayerAudioTrackData FindTrack(
+        PrayerAudioTrackData[] tracks,
+        string language)
+    {
+        if (tracks == null)
+            return null;
+
+        foreach (PrayerAudioTrackData track in tracks)
+        {
+            if (track != null &&
+                string.Equals(
+                    track.language,
+                    language,
+                    System.StringComparison.OrdinalIgnoreCase))
+            {
+                return track;
+            }
+        }
+
+        return null;
+    }
+
+    private PrayerAudioSegmentData FindSegment(
+        PrayerAudioTrackData track,
+        int partId)
+    {
+        if (track == null || track.segments == null)
+            return null;
+
+        foreach (PrayerAudioSegmentData segment in track.segments)
+        {
+            if (segment != null && segment.partId == partId)
+                return segment;
+        }
+
+        return null;
+    }
+
+    private AudioClip LoadAudioClip(PrayerAudioTrackData track)
+    {
+        if (track == null || string.IsNullOrWhiteSpace(track.audioPath))
+            return null;
+
+        AudioClip clip =
+            Resources.Load<AudioClip>(track.audioPath);
+
+        if (clip == null)
+        {
+            Debug.LogError(
+                $"فایل صوتی در مسیر {track.audioPath} پیدا نشد."
+            );
+        }
+
+        return clip;
     }
 
     private void OnPartClicked(PrayerPartUI clickedPart)
@@ -108,7 +193,10 @@ public class PrayerPageUI : MonoBehaviour
         if (prayerParts.Count == 0)
             return;
 
-        currentPartIndex = Mathf.Max(0, currentPartIndex - 1);
+        if (currentPartIndex <= 0)
+            currentPartIndex = 0;
+        else
+            currentPartIndex--;
 
         PrayerPartUI part = prayerParts[currentPartIndex];
         part.SelectAndPlay();
@@ -142,13 +230,18 @@ public class PrayerPageUI : MonoBehaviour
         if (content is RectTransform contentRect)
             LayoutRebuilder.ForceRebuildLayoutImmediate(contentRect);
 
-        prayerScrollRect.verticalNormalizedPosition = 1f;
+        if (prayerScrollRect != null)
+            prayerScrollRect.verticalNormalizedPosition = 1f;
     }
 
     private IEnumerator ScrollToPart(PrayerPartUI part)
     {
         yield return null;
         Canvas.ForceUpdateCanvases();
+
+        if (prayerScrollRect == null ||
+            prayerScrollRect.viewport == null)
+            yield break;
 
         RectTransform contentRect = content as RectTransform;
         RectTransform viewportRect = prayerScrollRect.viewport;
@@ -177,6 +270,9 @@ public class PrayerPageUI : MonoBehaviour
 
     private void ClearCurrentPrayer()
     {
+        if (audioManager != null)
+            audioManager.StopAll();
+
         foreach (PrayerPartUI item in prayerParts)
         {
             if (item == null)
@@ -188,8 +284,5 @@ public class PrayerPageUI : MonoBehaviour
 
         prayerParts.Clear();
         currentPartIndex = -1;
-
-        if (audioManager != null)
-            audioManager.StopAll();
     }
 }

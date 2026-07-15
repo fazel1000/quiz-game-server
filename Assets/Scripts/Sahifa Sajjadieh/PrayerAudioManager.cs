@@ -10,49 +10,74 @@ public class PrayerAudioManager : MonoBehaviour
     public event Action PlaybackFinished;
 
     private AudioSource activeSource;
+    private float segmentStartTime;
+    private float segmentEndTime;
+
     private bool isPaused;
-    private bool wasPlaying;
+    private bool isSegmentPlaying;
 
     private void Update()
     {
-        if (activeSource == null || !wasPlaying || isPaused)
+        if (activeSource == null || !isSegmentPlaying || isPaused)
             return;
 
-        if (!activeSource.isPlaying)
+        bool reachedEndTime =
+            activeSource.time >= segmentEndTime;
+
+        bool clipStopped =
+            !activeSource.isPlaying;
+
+        if (reachedEndTime || clipStopped)
+            FinishSegment();
+    }
+
+    public void PlayArabicSegment(
+        AudioClip clip,
+        float startTime,
+        float endTime)
+    {
+        PlaySegment(arabicSource, clip, startTime, endTime);
+    }
+
+    public void PlayPersianSegment(
+        AudioClip clip,
+        float startTime,
+        float endTime)
+    {
+        PlaySegment(persianSource, clip, startTime, endTime);
+    }
+
+    private void PlaySegment(
+        AudioSource source,
+        AudioClip clip,
+        float startTime,
+        float endTime)
+    {
+        if (source == null || clip == null)
+            return;
+
+        if (endTime <= startTime)
         {
-            wasPlaying = false;
-            PlaybackFinished?.Invoke();
+            Debug.LogWarning("زمان پایان فراز باید از زمان شروع بیشتر باشد.");
+            return;
         }
-    }
-
-    public void PlayArabic(AudioClip clip)
-    {
-        if (clip == null)
-            return;
 
         StopAll();
 
-        activeSource = arabicSource;
+        activeSource = source;
         activeSource.clip = clip;
+
+        segmentStartTime =
+            Mathf.Clamp(startTime, 0f, clip.length);
+
+        segmentEndTime =
+            Mathf.Clamp(endTime, segmentStartTime, clip.length);
+
+        activeSource.time = segmentStartTime;
         activeSource.Play();
 
         isPaused = false;
-        wasPlaying = true;
-    }
-
-    public void PlayPersian(AudioClip clip)
-    {
-        if (clip == null)
-            return;
-
-        StopAll();
-
-        activeSource = persianSource;
-        activeSource.clip = clip;
-        activeSource.Play();
-
-        isPaused = false;
-        wasPlaying = true;
+        isSegmentPlaying = true;
     }
 
     public void TogglePlayPause()
@@ -69,23 +94,33 @@ public class PrayerAudioManager : MonoBehaviour
         {
             activeSource.UnPause();
             isPaused = false;
-            wasPlaying = true;
-        }
-        else
-        {
-            activeSource.Play();
-            isPaused = false;
-            wasPlaying = true;
         }
     }
 
     public void StopAll()
     {
-        arabicSource.Stop();
-        persianSource.Stop();
+        isSegmentPlaying = false;
+        isPaused = false;
+
+        if (arabicSource != null)
+            arabicSource.Stop();
+
+        if (persianSource != null)
+            persianSource.Stop();
+
+        activeSource = null;
+    }
+
+    private void FinishSegment()
+    {
+        isSegmentPlaying = false;
+
+        if (activeSource != null)
+            activeSource.Stop();
 
         activeSource = null;
         isPaused = false;
-        wasPlaying = false;
+
+        PlaybackFinished?.Invoke();
     }
 }

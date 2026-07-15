@@ -18,19 +18,29 @@ public class PrayerPartUI : MonoBehaviour
     public Color normalColor = Color.white;
     public Color selectedColor = new Color(1f, 0.85f, 0.55f, 1f);
 
-    [Header("Audio")]
-    public AudioClip arabicClip;
-    public AudioClip persianClip;
+    [Header("Audio Manager")]
     public PrayerAudioManager audioManager;
+
+    [Header("Arabic Audio Segment")]
+    public AudioClip arabicClip;
+    public float arabicStartTime;
+    public float arabicEndTime;
+
+    [Header("Persian Audio Segment")]
+    public AudioClip persianClip;
+    public float persianStartTime;
+    public float persianEndTime;
 
     public event Action<PrayerPartUI> Clicked;
 
     private LayoutElement itemLayout;
     private LayoutElement arabicLayout;
     private LayoutElement persianLayout;
+
     private VerticalLayoutGroup layoutGroup;
     private RectTransform itemRect;
     private Button button;
+
     private Coroutine refreshCoroutine;
 
     private static PrayerPartUI selectedItem;
@@ -46,7 +56,9 @@ public class PrayerPartUI : MonoBehaviour
         persianLayout = GetOrAddLayoutElement(persianText.gameObject);
 
         button.onClick.AddListener(OnItemClicked);
-        backgroundImage.color = normalColor;
+
+        if (backgroundImage != null)
+            backgroundImage.color = normalColor;
     }
 
     public void SetTexts(string arabic, string persian)
@@ -54,15 +66,20 @@ public class PrayerPartUI : MonoBehaviour
         arabicText.text = arabic;
         persianText.text = persian;
 
-        if (refreshCoroutine != null)
-            StopCoroutine(refreshCoroutine);
-
-        refreshCoroutine = StartCoroutine(RefreshSize());
+        RefreshLayout();
     }
 
     public void SetAudioManager(PrayerAudioManager manager)
     {
         audioManager = manager;
+    }
+
+    public void RefreshLayout()
+    {
+        if (refreshCoroutine != null)
+            StopCoroutine(refreshCoroutine);
+
+        refreshCoroutine = StartCoroutine(RefreshSize());
     }
 
     private void OnItemClicked()
@@ -79,18 +96,44 @@ public class PrayerPartUI : MonoBehaviour
         selectedItem = this;
         SetSelected(true);
 
-        if (audioManager != null && arabicClip != null)
-            audioManager.PlayArabic(arabicClip);
+        if (audioManager == null)
+            return;
+
+        // فعلاً صوت فارسی در اولویت است.
+        if (persianClip != null && persianEndTime > persianStartTime)
+        {
+            audioManager.PlayPersianSegment(
+                persianClip,
+                persianStartTime,
+                persianEndTime
+            );
+
+            return;
+        }
+
+        if (arabicClip != null && arabicEndTime > arabicStartTime)
+        {
+            audioManager.PlayArabicSegment(
+                arabicClip,
+                arabicStartTime,
+                arabicEndTime
+            );
+        }
     }
 
     public void SetSelected(bool isSelected)
     {
-        backgroundImage.color = isSelected ? selectedColor : normalColor;
+        if (backgroundImage == null)
+            return;
+
+        backgroundImage.color =
+            isSelected ? selectedColor : normalColor;
     }
 
     private IEnumerator RefreshSize()
     {
         yield return null;
+
         Canvas.ForceUpdateCanvases();
 
         arabicText.ForceMeshUpdate();
@@ -101,11 +144,19 @@ public class PrayerPartUI : MonoBehaviour
             layoutGroup.padding.left -
             layoutGroup.padding.right;
 
-        float arabicHeight =
-            arabicText.GetPreferredValues(arabicText.text, availableWidth, 0).y;
+        availableWidth = Mathf.Max(1f, availableWidth);
 
-        float persianHeight =
-            persianText.GetPreferredValues(persianText.text, availableWidth, 0).y;
+        float arabicHeight = arabicText.GetPreferredValues(
+            arabicText.text,
+            availableWidth,
+            0f
+        ).y;
+
+        float persianHeight = persianText.GetPreferredValues(
+            persianText.text,
+            availableWidth,
+            0f
+        ).y;
 
         arabicLayout.preferredHeight = Mathf.Ceil(arabicHeight);
         persianLayout.preferredHeight = Mathf.Ceil(persianHeight);

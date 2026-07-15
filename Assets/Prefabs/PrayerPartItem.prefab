@@ -94,10 +94,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Padding:
-    m_Left: 50
-    m_Right: 50
-    m_Top: 50
-    m_Bottom: 50
+    m_Left: 80
+    m_Right: 80
+    m_Top: 150
+    m_Bottom: 150
   m_ChildAlignment: 2
   m_Spacing: 40
   m_ChildForceExpandWidth: 1
@@ -124,9 +124,13 @@ MonoBehaviour:
   backgroundImage: {fileID: 6825339267201606936}
   normalColor: {r: 1, g: 1, b: 1, a: 1}
   selectedColor: {r: 1, g: 0.85, b: 0.55, a: 1}
-  arabicClip: {fileID: 0}
-  persianClip: {fileID: 0}
   audioManager: {fileID: 0}
+  arabicClip: {fileID: 0}
+  arabicStartTime: 0
+  arabicEndTime: 0
+  persianClip: {fileID: 8300000, guid: 6414607f358da8241b7cfd1e07018250, type: 3}
+  persianStartTime: 0
+  persianEndTime: 0
 --- !u!114 &-2841150686793269216
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -292,8 +296,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 26
-  m_fontSizeBase: 26
+  m_fontSize: 60
+  m_fontSizeBase: 60
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -304,13 +308,13 @@ MonoBehaviour:
   m_textAlignment: 65535
   m_characterSpacing: -7.1
   m_wordSpacing: 13.46
-  m_lineSpacing: 0
+  m_lineSpacing: 29.4
   m_lineSpacingMax: 0
   m_paragraphSpacing: 0
   m_charWidthMaxAdj: 0
   m_TextWrappingMode: 1
   m_wordWrappingRatios: 0.4
-  m_overflowMode: 3
+  m_overflowMode: 0
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
@@ -453,19 +457,19 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 26
-  m_fontSizeBase: 26
+  m_fontSize: 45
+  m_fontSizeBase: 45
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
   m_fontSizeMax: 72
-  m_fontStyle: 0
+  m_fontStyle: 1
   m_HorizontalAlignment: 4
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
   m_wordSpacing: 0
-  m_lineSpacing: 0
+  m_lineSpacing: 24.3
   m_lineSpacingMax: 0
   m_paragraphSpacing: 0
   m_charWidthMaxAdj: 0
