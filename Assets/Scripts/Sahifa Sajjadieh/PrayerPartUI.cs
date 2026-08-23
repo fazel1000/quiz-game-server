@@ -16,7 +16,13 @@ public class PrayerPartUI : MonoBehaviour
     [Header("Background")]
     public Image backgroundImage;
     public Color normalColor = Color.white;
-    public Color selectedColor = new Color(1f, 0.85f, 0.55f, 1f);
+
+    public Color selectedColor =
+        new Color(1f, 0.85f, 0.55f, 1f);
+
+    [Header("Selection Animation")]
+    [SerializeField]
+    private float selectionAnimationDuration = 1f;
 
     [Header("Audio Manager")]
     public PrayerAudioManager audioManager;
@@ -42,26 +48,45 @@ public class PrayerPartUI : MonoBehaviour
     private Button button;
 
     private Coroutine refreshCoroutine;
+    private Coroutine colorCoroutine;
 
     private static PrayerPartUI selectedItem;
 
     private void Awake()
     {
-        itemRect = GetComponent<RectTransform>();
-        itemLayout = GetComponent<LayoutElement>();
-        layoutGroup = GetComponent<VerticalLayoutGroup>();
-        button = GetComponent<Button>();
+        itemRect =
+            GetComponent<RectTransform>();
 
-        arabicLayout = GetOrAddLayoutElement(arabicText.gameObject);
-        persianLayout = GetOrAddLayoutElement(persianText.gameObject);
+        itemLayout =
+            GetComponent<LayoutElement>();
 
-        button.onClick.AddListener(OnItemClicked);
+        layoutGroup =
+            GetComponent<VerticalLayoutGroup>();
+
+        button =
+            GetComponent<Button>();
+
+        arabicLayout =
+            GetOrAddLayoutElement(
+                arabicText.gameObject
+            );
+
+        persianLayout =
+            GetOrAddLayoutElement(
+                persianText.gameObject
+            );
+
+        button.onClick.AddListener(
+            OnItemClicked
+        );
 
         if (backgroundImage != null)
             backgroundImage.color = normalColor;
     }
 
-    public void SetTexts(string arabic, string persian)
+    public void SetTexts(
+        string arabic,
+        string persian)
     {
         arabicText.text = arabic;
         persianText.text = persian;
@@ -69,7 +94,8 @@ public class PrayerPartUI : MonoBehaviour
         RefreshLayout();
     }
 
-    public void SetAudioManager(PrayerAudioManager manager)
+    public void SetAudioManager(
+        PrayerAudioManager manager)
     {
         audioManager = manager;
     }
@@ -79,7 +105,8 @@ public class PrayerPartUI : MonoBehaviour
         if (refreshCoroutine != null)
             StopCoroutine(refreshCoroutine);
 
-        refreshCoroutine = StartCoroutine(RefreshSize());
+        refreshCoroutine =
+            StartCoroutine(RefreshSize());
     }
 
     private void OnItemClicked()
@@ -90,8 +117,11 @@ public class PrayerPartUI : MonoBehaviour
 
     public void SelectAndPlay()
     {
-        if (selectedItem != null && selectedItem != this)
+        if (selectedItem != null &&
+            selectedItem != this)
+        {
             selectedItem.SetSelected(false);
+        }
 
         selectedItem = this;
         SetSelected(true);
@@ -99,8 +129,9 @@ public class PrayerPartUI : MonoBehaviour
         if (audioManager == null)
             return;
 
-        // فعلاً صوت فارسی در اولویت است.
-        if (persianClip != null && persianEndTime > persianStartTime)
+        if (persianClip != null &&
+            persianEndTime >
+            persianStartTime)
         {
             audioManager.PlayPersianSegment(
                 persianClip,
@@ -111,7 +142,9 @@ public class PrayerPartUI : MonoBehaviour
             return;
         }
 
-        if (arabicClip != null && arabicEndTime > arabicStartTime)
+        if (arabicClip != null &&
+            arabicEndTime >
+            arabicStartTime)
         {
             audioManager.PlayArabicSegment(
                 arabicClip,
@@ -126,8 +159,72 @@ public class PrayerPartUI : MonoBehaviour
         if (backgroundImage == null)
             return;
 
+        Color targetColor =
+            isSelected
+                ? selectedColor
+                : normalColor;
+
+        if (colorCoroutine != null)
+            StopCoroutine(colorCoroutine);
+
+        colorCoroutine =
+            StartCoroutine(
+                AnimateBackgroundColor(
+                    targetColor
+                )
+            );
+    }
+
+    private IEnumerator AnimateBackgroundColor(
+        Color targetColor)
+    {
+        Color startColor =
+            backgroundImage.color;
+
+        if (selectionAnimationDuration <= 0f)
+        {
+            backgroundImage.color =
+                targetColor;
+
+            colorCoroutine = null;
+            yield break;
+        }
+
+        float elapsedTime = 0f;
+
+        while (elapsedTime <
+               selectionAnimationDuration)
+        {
+            elapsedTime +=
+                Time.unscaledDeltaTime;
+
+            float progress =
+                Mathf.Clamp01(
+                    elapsedTime /
+                    selectionAnimationDuration
+                );
+
+            float smoothProgress =
+                Mathf.SmoothStep(
+                    0f,
+                    1f,
+                    progress
+                );
+
+            backgroundImage.color =
+                Color.Lerp(
+                    startColor,
+                    targetColor,
+                    smoothProgress
+                );
+
+            yield return null;
+        }
+
         backgroundImage.color =
-            isSelected ? selectedColor : normalColor;
+            targetColor;
+
+        colorCoroutine = null;
     }
 
     private IEnumerator RefreshSize()
@@ -144,22 +241,31 @@ public class PrayerPartUI : MonoBehaviour
             layoutGroup.padding.left -
             layoutGroup.padding.right;
 
-        availableWidth = Mathf.Max(1f, availableWidth);
+        availableWidth =
+            Mathf.Max(
+                1f,
+                availableWidth
+            );
 
-        float arabicHeight = arabicText.GetPreferredValues(
-            arabicText.text,
-            availableWidth,
-            0f
-        ).y;
+        float arabicHeight =
+            arabicText.GetPreferredValues(
+                arabicText.text,
+                availableWidth,
+                0f
+            ).y;
 
-        float persianHeight = persianText.GetPreferredValues(
-            persianText.text,
-            availableWidth,
-            0f
-        ).y;
+        float persianHeight =
+            persianText.GetPreferredValues(
+                persianText.text,
+                availableWidth,
+                0f
+            ).y;
 
-        arabicLayout.preferredHeight = Mathf.Ceil(arabicHeight);
-        persianLayout.preferredHeight = Mathf.Ceil(persianHeight);
+        arabicLayout.preferredHeight =
+            Mathf.Ceil(arabicHeight);
+
+        persianLayout.preferredHeight =
+            Mathf.Ceil(persianHeight);
 
         itemLayout.preferredHeight =
             layoutGroup.padding.top +
@@ -168,20 +274,35 @@ public class PrayerPartUI : MonoBehaviour
             persianLayout.preferredHeight +
             layoutGroup.padding.bottom;
 
-        LayoutRebuilder.ForceRebuildLayoutImmediate(itemRect);
+        LayoutRebuilder
+            .ForceRebuildLayoutImmediate(
+                itemRect
+            );
 
-        if (transform.parent is RectTransform parentRect)
-            LayoutRebuilder.ForceRebuildLayoutImmediate(parentRect);
+        if (transform.parent
+            is RectTransform parentRect)
+        {
+            LayoutRebuilder
+                .ForceRebuildLayoutImmediate(
+                    parentRect
+                );
+        }
 
         refreshCoroutine = null;
     }
 
-    private LayoutElement GetOrAddLayoutElement(GameObject target)
+    private LayoutElement GetOrAddLayoutElement(
+        GameObject target)
     {
-        LayoutElement element = target.GetComponent<LayoutElement>();
+        LayoutElement element =
+            target.GetComponent<LayoutElement>();
 
         if (element == null)
-            element = target.AddComponent<LayoutElement>();
+        {
+            element =
+                target.AddComponent
+                    <LayoutElement>();
+        }
 
         return element;
     }
@@ -189,7 +310,11 @@ public class PrayerPartUI : MonoBehaviour
     private void OnDestroy()
     {
         if (button != null)
-            button.onClick.RemoveListener(OnItemClicked);
+        {
+            button.onClick.RemoveListener(
+                OnItemClicked
+            );
+        }
 
         if (selectedItem == this)
             selectedItem = null;
