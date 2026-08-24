@@ -20,6 +20,5 @@ public class SurahData
 public class VerseData
 {
     public int number;
-    [TextArea(2, 6)] public string arabicText;
     public AudioClip audio;
 }

@@ -118,9 +118,12 @@ namespace InfinityCode.UltimateEditorEnhancer.HierarchyTools
 
         public static Texture GetGameObjectIcon(GameObject go)
         {
+            if (go == null) return null;
+
             if (go.tag == "Collection") return Icons.collection;
 
             Texture texture = AssetPreview.GetMiniThumbnail(go);
+            if (texture == null) return EditorIconContents.gameObject.image;
             string textureName = texture.name;
 
             if (textureName == "d_Prefab Icon" || textureName == "Prefab Icon")
@@ -137,6 +140,7 @@ namespace InfinityCode.UltimateEditorEnhancer.HierarchyTools
             }
 
             Component best = GetBestComponent(go);
+            if (best == null) return EditorIconContents.gameObject.image;
             if (best.GetType().FullName == "Unity.Scenes.SubScene") return EditorIconContents.unityLogo.image;
             texture = AssetPreview.GetMiniThumbnail(best);
 

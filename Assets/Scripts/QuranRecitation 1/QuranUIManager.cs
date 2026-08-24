@@ -1,5 +1,5 @@
-using System;
 using System.Collections;
+using System.Threading.Tasks;
 using RTLTMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -28,15 +28,15 @@ public class QuranUIManager : MonoBehaviour
 
     [Header("Data")]
     [SerializeField] private QuranDatabase database;
+    [SerializeField] private QuranJsonRepository quranRepository;
 
-    [Header("Recording")]
+    [Header("Recording & Assessment")]
     [SerializeField] private QuranRecorder recorder;
-    [SerializeField] private PronunciationScore pronunciationScore;
+    [SerializeField] private QuranAssessmentEngine assessmentEngine;
     [SerializeField] private RTLTextMeshPro percentText;
 
     [Header("Transition")]
-    [SerializeField, Min(0.05f)]
-    private float transitionDuration = 0.25f;
+    [SerializeField, Min(0.05f)] private float transitionDuration = 0.25f;
 
     private CanvasGroup mainGroup;
     private CanvasGroup quranGroup;
@@ -47,6 +47,7 @@ public class QuranUIManager : MonoBehaviour
     private int currentVerseIndex = -1;
     private AudioClip currentVerseAudio;
     private bool isPlayingVerse;
+    private bool isAssessing;
 
     private void Awake()
     {
@@ -60,6 +61,9 @@ public class QuranUIManager : MonoBehaviour
         HideInstant(versesListPanel, versesGroup);
         HideInstant(versePanel, verseGroup);
 
+        if (quranRepository != null && !quranRepository.IsReady)
+            quranRepository.Initialize();
+
         BuildSurahList();
 
         if (playButton != null)
@@ -68,10 +72,6 @@ public class QuranUIManager : MonoBehaviour
             playButton.onClick.AddListener(ReplayCurrentVerse);
         }
     }
-
-    // =========================
-    // PANELS
-    // =========================
 
     public void OpenQuranPanel()
     {
@@ -119,10 +119,6 @@ public class QuranUIManager : MonoBehaviour
                 versesGroup));
     }
 
-    // =========================
-    // SURAH LIST
-    // =========================
-
     private void BuildSurahList()
     {
         ClearChildren(surahContent);
@@ -137,20 +133,20 @@ public class QuranUIManager : MonoBehaviour
 
         for (int i = 0; i < database.surahs.Length; i++)
         {
+            if (database.surahs[i] == null)
+                continue;
+
             int capturedIndex = i;
 
-            Button button =
-                Instantiate(
-                    surahButtonPrefab,
-                    surahContent);
+            Button button = Instantiate(
+                surahButtonPrefab,
+                surahContent);
 
             RTLTextMeshPro text =
                 button.GetComponentInChildren<RTLTextMeshPro>(true);
 
             if (text != null)
-            {
                 text.text = database.surahs[i].namePersian;
-            }
 
             button.onClick.RemoveAllListeners();
 
@@ -162,12 +158,12 @@ public class QuranUIManager : MonoBehaviour
     public void OpenSurah(int index)
     {
         if (database == null ||
-            database.surahs == null)
-            return;
-
-        if (index < 0 ||
+            database.surahs == null ||
+            index < 0 ||
             index >= database.surahs.Length)
+        {
             return;
+        }
 
         currentSurahIndex = index;
         currentVerseIndex = -1;
@@ -181,10 +177,6 @@ public class QuranUIManager : MonoBehaviour
                 versesListPanel,
                 versesGroup));
     }
-
-    // =========================
-    // VERSE LIST
-    // =========================
 
     private void BuildVerseList(SurahData surah)
     {
@@ -200,20 +192,24 @@ public class QuranUIManager : MonoBehaviour
 
         for (int i = 0; i < surah.verses.Length; i++)
         {
-            int capturedIndex = i;
+            if (surah.verses[i] == null)
+                continue;
 
-            Button frame =
-                Instantiate(
-                    verseFramePrefab,
-                    verseContent);
+            int capturedIndex = i;
+            VerseData verse = surah.verses[i];
+
+            Button frame = Instantiate(
+                verseFramePrefab,
+                verseContent);
 
             RTLTextMeshPro text =
                 frame.GetComponentInChildren<RTLTextMeshPro>(true);
 
             if (text != null)
             {
-                text.text =
-                    surah.verses[i].arabicText;
+                text.text = GetVerseText(
+                    surah.number,
+                    verse.number);
             }
 
             frame.onClick.RemoveAllListeners();
@@ -225,52 +221,53 @@ public class QuranUIManager : MonoBehaviour
         }
     }
 
-    // =========================
-    // VERSE PANEL
-    // =========================
-
-    public void OpenVerse(
-        int surahIndex,
-        int verseIndex)
+    public void OpenVerse(int surahIndex, int verseIndex)
     {
         if (database == null ||
-            database.surahs == null)
-            return;
-
-        if (surahIndex < 0 ||
+            database.surahs == null ||
+            surahIndex < 0 ||
             surahIndex >= database.surahs.Length)
+        {
             return;
+        }
 
         SurahData surah =
             database.surahs[surahIndex];
 
-        if (surah.verses == null ||
+        if (surah == null ||
+            surah.verses == null ||
             verseIndex < 0 ||
             verseIndex >= surah.verses.Length)
+        {
             return;
+        }
 
         VerseData verse =
             surah.verses[verseIndex];
 
-        currentVerseAudio = verse.audio;
+        if (verse == null)
+            return;
 
         currentSurahIndex = surahIndex;
         currentVerseIndex = verseIndex;
+        currentVerseAudio = verse.audio;
 
         if (verseTitle != null)
         {
             verseTitle.text =
-                $"{surah.namePersian} - آیه {verse.number}";
+                surah.namePersian +
+                " - آیه " +
+                verse.number;
         }
 
         if (verseText != null)
         {
-            verseText.text =
-                verse.arabicText;
+            verseText.text = GetVerseText(
+                surah.number,
+                verse.number);
         }
 
         ResetPercent();
-
         PlayVerseAudio(verse.audio);
 
         StartCoroutine(
@@ -279,6 +276,21 @@ public class QuranUIManager : MonoBehaviour
                 versesGroup,
                 versePanel,
                 verseGroup));
+    }
+
+    private string GetVerseText(
+        int surahNumber,
+        int verseNumber)
+    {
+        if (quranRepository == null ||
+            !quranRepository.IsReady)
+        {
+            return string.Empty;
+        }
+
+        return quranRepository.GetVerseText(
+            surahNumber,
+            verseNumber);
     }
 
     private void PlayVerseAudio(AudioClip clip)
@@ -295,8 +307,12 @@ public class QuranUIManager : MonoBehaviour
 
     public void ReplayCurrentVerse()
     {
-        if (isPlayingVerse || currentVerseAudio == null || audioSource == null)
+        if (isPlayingVerse ||
+            currentVerseAudio == null ||
+            audioSource == null)
+        {
             return;
+        }
 
         audioSource.Stop();
         audioSource.clip = currentVerseAudio;
@@ -312,8 +328,11 @@ public class QuranUIManager : MonoBehaviour
         if (playButton != null)
             playButton.interactable = false;
 
-        while (audioSource != null && audioSource.isPlaying)
+        while (audioSource != null &&
+               audioSource.isPlaying)
+        {
             yield return null;
+        }
 
         isPlayingVerse = false;
 
@@ -327,62 +346,93 @@ public class QuranUIManager : MonoBehaviour
             audioSource.Stop();
     }
 
-    // =========================
-    // RECORDING
-    // =========================
-
     public void ToggleRecording()
     {
-        if (recorder == null)
+        if (recorder == null ||
+            isAssessing)
+        {
             return;
+        }
 
         if (!recorder.IsRecording)
         {
             StopAudio();
             recorder.StartRecording();
-
             ResetPercent();
+            return;
         }
-        else
-        {
-            AudioClip recording =
-                recorder.StopRecording();
 
-            EvaluateRecording(recording);
-        }
+        AudioClip recording =
+            recorder.StopRecording();
+
+        _ = EvaluateRecordingAsync(recording);
     }
 
-    private void EvaluateRecording(
+    private async Task EvaluateRecordingAsync(
         AudioClip recording)
     {
-        if (recording == null)
+        if (recording == null ||
+            assessmentEngine == null ||
+            database == null ||
+            database.surahs == null)
+        {
             return;
-
-        if (pronunciationScore == null)
-            return;
+        }
 
         if (currentSurahIndex < 0 ||
-            currentVerseIndex < 0)
+            currentSurahIndex >= database.surahs.Length)
+        {
             return;
+        }
+
+        SurahData surah =
+            database.surahs[currentSurahIndex];
+
+        if (surah == null ||
+            surah.verses == null ||
+            currentVerseIndex < 0 ||
+            currentVerseIndex >= surah.verses.Length)
+        {
+            return;
+        }
 
         VerseData verse =
-            database.surahs[currentSurahIndex]
-                .verses[currentVerseIndex];
+            surah.verses[currentVerseIndex];
 
-        // فعلاً چون سیستم تشخیص گفتار عربی نداریم،
-        // این بخش بعداً به Speech Recognition متصل می‌شود.
-        //
-        // recognizedText باید متن تشخیص داده‌شده
-        // از صدای کودک باشد.
+        if (verse == null)
+            return;
 
-        string recognizedText = "";
+        isAssessing = true;
+        ResetPercent();
 
-        float score =
-            pronunciationScore.CompareAudio(
-                verse.audio,
+        QuranAssessmentResult result =
+            await assessmentEngine.AssessAsync(
+                surah.number,
+                verse.number,
                 recording);
 
-        SetPercent(score);
+        isAssessing = false;
+
+        if (!result.success)
+        {
+            Debug.LogWarning(
+                "Quran assessment failed: " +
+                result.error);
+
+            SetPercent(0f);
+            return;
+        }
+
+        SetPercent(result.score);
+
+        Debug.Log(
+            "Quran assessment | " +
+            "Verse=" + surah.number + ":" + verse.number +
+            " | Score=" + result.score.ToString("0.0") + "%" +
+            " | Matches=" + result.matches +
+            " | Sub=" + result.substitutions +
+            " | Del=" + result.deletions +
+            " | Ins=" + result.insertions);
     }
 
     private void SetPercent(float value)
@@ -391,17 +441,15 @@ public class QuranUIManager : MonoBehaviour
             return;
 
         percentText.text =
-            $"{Mathf.RoundToInt(value)}%";
+            Mathf.RoundToInt(
+                Mathf.Clamp(value, 0f, 100f)) +
+            "%";
     }
 
     private void ResetPercent()
     {
         SetPercent(0f);
     }
-
-    // =========================
-    // PANEL TRANSITION
-    // =========================
 
     private IEnumerator SwitchPanel(
         GameObject fromObject,
@@ -433,8 +481,7 @@ public class QuranUIManager : MonoBehaviour
                 Mathf.Clamp01(
                     t / transitionDuration);
 
-            p =
-                p * p * (3f - 2f * p);
+            p = p * p * (3f - 2f * p);
 
             fromGroup.alpha = 1f - p;
             toGroup.alpha = p;
@@ -450,10 +497,6 @@ public class QuranUIManager : MonoBehaviour
         toGroup.blocksRaycasts = true;
     }
 
-    // =========================
-    // HELPERS
-    // =========================
-
     private CanvasGroup PrepareGroup(
         GameObject panel)
     {
@@ -464,8 +507,7 @@ public class QuranUIManager : MonoBehaviour
             panel.GetComponent<CanvasGroup>();
 
         if (group == null)
-            group =
-                panel.AddComponent<CanvasGroup>();
+            group = panel.AddComponent<CanvasGroup>();
 
         return group;
     }
@@ -479,7 +521,6 @@ public class QuranUIManager : MonoBehaviour
             return;
 
         obj.SetActive(true);
-
         group.alpha = 1f;
         group.interactable = true;
         group.blocksRaycasts = true;
@@ -494,7 +535,6 @@ public class QuranUIManager : MonoBehaviour
             return;
 
         obj.SetActive(false);
-
         group.alpha = 0f;
         group.interactable = false;
         group.blocksRaycasts = false;
@@ -510,8 +550,7 @@ public class QuranUIManager : MonoBehaviour
              i >= 0;
              i--)
         {
-            Destroy(
-                parent.GetChild(i).gameObject);
+            Destroy(parent.GetChild(i).gameObject);
         }
     }
 }
