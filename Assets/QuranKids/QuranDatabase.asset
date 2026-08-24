@@ -3,136 +3,73 @@
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 507a846c2c0a08c4fba0801c5dfb6f22, type: 3}
   m_Name: QuranDatabase
   m_EditorClassIdentifier: 
   surahs:
   - number: 1
-    nameArabic: الفاتحة
-    namePersian: فاتحه
+    nameArabic: "\u0627\u0644\u0641\u0627\u062A\u062D\u0629"
+    namePersian: "\u0633\u0648\u0631\u0647 \u0641\u0627\u062A\u062D\u0647"
     verses:
     - number: 1
-      arabicText: ""
       audio: {fileID: 0}
-      expectedPhonemes: "\u0628\u0650\u0633\u0645\u0650 \u0644\u0644\u064E\u0627\u0627\u0647\u0650
-        \u0631\u0631\u064E\u062D\u0645\u064E\u0627\u0627\u0646\u0650 \u0631\u0631\u064E\u062D\u0650\u06E6\u06E6\u06E6\u06E6\u0645"
     - number: 2
-      arabicText: ""
       audio: {fileID: 0}
-      expectedPhonemes: "\u0621\u064E\u0644\u062D\u064E\u0645\u062F\u064F \u0644\u0650\u0644\u0644\u064E\u0627\u0627\u0647\u0650
-        \u0631\u064E\u0628\u0628\u0650 \u0644\u0639\u064E\u0627\u0627\u0644\u064E\u0645\u0650\u06E6\u06E6\u06E6\u06E6\u0646"
     - number: 3
-      arabicText: ""
       audio: {fileID: 0}
-      expectedPhonemes: "\u0621\u064E\u0631\u0631\u064E\u062D\u0645\u064E\u0627\u0627\u0646\u0650
-        \u0631\u0631\u064E\u062D\u0650\u06E6\u06E6\u06E6\u06E6\u0645"
     - number: 4
-      arabicText: ""
       audio: {fileID: 0}
-      expectedPhonemes: "\u0645\u064E\u0627\u0627\u0644\u0650\u0643\u0650 \u064A\u064E\u0648\u0645\u0650
-        \u062F\u062F\u0650\u06E6\u06E6\u06E6\u06E6\u0646"
     - number: 5
-      arabicText: ""
       audio: {fileID: 0}
-      expectedPhonemes: "\u0621\u0650\u064A\u064A\u064E\u0627\u0627\u0643\u064E \u0646\u064E\u0639\u0628\u064F\u062F\u064F
-        \u0648\u064E\u0621\u0650\u064A\u064A\u064E\u0627\u0627\u0643\u064E \u0646\u064E\u0633\u062A\u064E\u0639\u0650\u06E6\u06E6\u06E6\u06E6\u0646"
     - number: 6
-      arabicText: ""
       audio: {fileID: 0}
-      expectedPhonemes: "\u0621\u0650\u0647\u062F\u0650\u0646\u064E \u0635\u0635\u0650\u0631\u064E\u0627\u0627\u0637\u064E
-        \u0644\u0645\u064F\u0633\u062A\u064E\u0642\u0650\u06E6\u06E6\u06E6\u06E6\u0645"
     - number: 7
-      arabicText: ""
       audio: {fileID: 0}
-      expectedPhonemes: "\u0635\u0650\u0631\u064E\u0627\u0627\u0637\u064E \u0644\u0644\u064E\u0630\u0650\u06E6\u06E6\u0646\u064E
-        \u0621\u064E\u0646\u0639\u064E\u0645\u062A\u064E \u0639\u064E\u0644\u064E\u064A\u0647\u0650\u0645
-        \u063A\u064E\u064A\u0631\u0650 \u0644\u0645\u064E\u063A\u0636\u064F\u06E5\u06E5\u0628\u0650
-        \u0639\u064E\u0644\u064E\u064A\u0647\u0650\u0645 \u0648\u064E\u0644\u064E
-        \u0636\u0636\u064E\u0627\u0627\u0627\u0627\u0627\u0627\u0644\u0644\u0650\u06E6\u06E6\u06E6\u06E6\u0646"
   - number: 112
-    nameArabic: الإخلاص
-    namePersian: اخلاص
+    nameArabic: "\u0627\u0644\u0625\u062E\u0644\u0627\u0635"
+    namePersian: "\u0633\u0648\u0631\u0647 \u0627\u062E\u0644\u0627\u0635"
     verses:
     - number: 1
-      arabicText: ""
       audio: {fileID: 0}
-      expectedPhonemes: "\u0642\u064F\u0644 \u0647\u064F\u0648\u064E \u0644\u0644\u064E\u0627\u0627\u0647\u064F
-        \u0621\u064E\u062D\u064E\u062F\u0687"
     - number: 2
-      arabicText: ""
       audio: {fileID: 0}
-      expectedPhonemes: "\u0621\u064E\u0644\u0644\u064E\u0627\u0627\u0647\u064F \u0635\u0635\u064E\u0645\u064E\u062F\u0687"
     - number: 3
-      arabicText: ""
       audio: {fileID: 0}
-      expectedPhonemes: "\u0644\u064E\u0645 \u064A\u064E\u0644\u0650\u062F\u0687
-        \u0648\u064E\u0644\u064E\u0645 \u064A\u064F\u06E5\u06E5\u0644\u064E\u062F\u0687"
     - number: 4
-      arabicText: ""
       audio: {fileID: 0}
-      expectedPhonemes: "\u0648\u064E\u0644\u064E\u0645 \u064A\u064E\u0643\u064F\u0644\u0644\u064E\u0647\u064F\u06E5\u06E5
-        \u0643\u064F\u0641\u064F\u0648\u064E\u0646 \u0621\u064E\u062D\u064E\u062F\u0687"
   - number: 113
-    nameArabic: الفلق
-    namePersian: فلق
+    nameArabic: "\u0627\u0644\u0641\u0644\u0642"
+    namePersian: "\u0633\u0648\u0631\u0647 \u0641\u0644\u0642"
     verses:
     - number: 1
-      arabicText: ""
       audio: {fileID: 0}
-      expectedPhonemes: "\u0642\u064F\u0644 \u0621\u064E\u0639\u064F\u06E5\u06E5\u0630\u064F
-        \u0628\u0650\u0631\u064E\u0628\u0628\u0650 \u0644\u0641\u064E\u0644\u064E\u0642\u0687"
     - number: 2
-      arabicText: ""
       audio: {fileID: 0}
-      expectedPhonemes: "\u0645\u0650\u06BA\u06BA\u06BA\u0634\u064E\u0631\u0631\u0650
-        \u0645\u064E\u0627\u0627 \u062E\u064E\u0644\u064E\u0642\u0687"
     - number: 3
-      arabicText: ""
       audio: {fileID: 0}
-      expectedPhonemes: "\u0648\u064E\u0645\u0650\u06BA\u06BA\u06BA\u0634\u064E\u0631\u0631\u0650
-        \u063A\u064E\u0627\u0627\u0633\u0650\u0642\u0650\u0646 \u0621\u0650\u0630\u064E\u0627\u0627
-        \u0648\u064E\u0642\u064E\u0628\u0687"
     - number: 4
-      arabicText: ""
       audio: {fileID: 0}
-      expectedPhonemes: "\u0648\u064E\u0645\u0650\u06BA\u06BA\u06BA\u0634\u064E\u0631\u0631\u0650
-        \u0646\u0646\u0646\u0646\u064E\u0641\u0641\u064E\u0627\u0627\u062B\u064E\u0627\u0627\u062A\u0650
-        \u0641\u0650 \u0644\u0639\u064F\u0642\u064E\u062F\u0687"
     - number: 5
-      arabicText: ""
       audio: {fileID: 0}
-      expectedPhonemes: "\u0648\u064E\u0645\u0650\u06BA\u06BA\u06BA\u0634\u064E\u0631\u0631\u0650
-        \u062D\u064E\u0627\u0627\u0633\u0650\u062F\u0650\u0646 \u0621\u0650\u0630\u064E\u0627\u0627
-        \u062D\u064E\u0633\u064E\u062F\u0687"
   - number: 114
-    nameArabic: الناس
-    namePersian: ناس
+    nameArabic: "\u0627\u0644\u0646\u0627\u0633"
+    namePersian: "\u0633\u0648\u0631\u0647 \u0646\u0627\u0633"
     verses:
     - number: 1
-      arabicText: ""
       audio: {fileID: 0}
-      expectedPhonemes: "\u0642\u064F\u0644 \u0621\u064E\u0639\u064F\u06E5\u06E5\u0630\u064F
-        \u0628\u0650\u0631\u064E\u0628\u0628\u0650 \u0646\u0646\u0646\u0646\u064E\u0627\u0627\u0627\u0627\u0633"
     - number: 2
-      arabicText: ""
       audio: {fileID: 0}
-      expectedPhonemes: "\u0645\u064E\u0644\u0650\u0643\u0650 \u0646\u0646\u0646\u0646\u064E\u0627\u0627\u0627\u0627\u0633"
     - number: 3
-      arabicText: ""
       audio: {fileID: 0}
-      expectedPhonemes: "\u0621\u0650\u0644\u064E\u0627\u0627\u0647\u0650 \u0646\u0646\u0646\u0646\u064E\u0627\u0627\u0627\u0627\u0633"
     - number: 4
-      arabicText: ""
       audio: {fileID: 0}
-      expectedPhonemes: "\u0645\u0650\u06BA\u06BA\u06BA\u0634\u064E\u0631\u0631\u0650
-        \u0644\u0648\u064E\u0633\u0648\u064E\u0627\u0627\u0633\u0650 \u0644\u062E\u064E\u0646\u0646\u0646\u0646\u064E\u0627\u0627\u0627\u0627\u0633"
     - number: 5
-      arabicText: ""
       audio: {fileID: 0}
-      expectedPhonemes: "\u0621\u064E\u0644\u0644\u064E\u0630\u0650\u06E6\u06E6 \u064A\u064F\u0648\u064E\u0633\u0648\u0650\u0633\u064F
-        \u0641\u0650\u06E6\u06E6 \u0635\u064F\u062F\u064F\u06E5\u06E5\u0631\u0650
-        \u0646\u0646\u0646\u0646\u064E\u0627\u0627\u0627\u0627\u0633"
     - number: 6
-      arabicText: ""
       audio: {fileID: 0}
-      expectedPhonemes: "\u0645\u0650\u0646\u064E \u0644\u062C\u0650\u0646\u0646\u0646\u0646\u064E\u062A\u0650
-        \u0648\u064E\u0646\u0646\u0646\u0646\u064E\u0627\u0627\u0627\u0627\u0633"

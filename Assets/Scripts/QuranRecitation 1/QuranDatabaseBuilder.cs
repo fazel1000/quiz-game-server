@@ -2,237 +2,353 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
-public static class QuranDatabaseBuilder
+public class QuranDatabaseBuilder : EditorWindow
 {
-    [MenuItem("Quran Kids/Create Empty Quran Database")]
-    private static void CreateDatabase()
+    private QuranDatabase database;
+    private TextAsset orderedQuranPhonemesJson;
+
+    private string surahNumbers = "1,112,113,114";
+    private Vector2 scroll;
+    private string status = string.Empty;
+
+    [MenuItem("Quran Kids/Quran Database Builder")]
+    public static void OpenWindow()
     {
-        QuranDatabase asset =
-            ScriptableObject.CreateInstance<QuranDatabase>();
+        QuranDatabaseBuilder window =
+            GetWindow<QuranDatabaseBuilder>("Quran Database Builder");
 
-        string folder = "Assets/QuranKids";
-
-        if (!AssetDatabase.IsValidFolder("Assets/QuranKids"))
-            AssetDatabase.CreateFolder("Assets", "QuranKids");
-
-        string path =
-            AssetDatabase.GenerateUniqueAssetPath(
-                folder + "/QuranDatabase.asset");
-
-        AssetDatabase.CreateAsset(asset, path);
-        AssetDatabase.SaveAssets();
-
-        Selection.activeObject = asset;
-        EditorGUIUtility.PingObject(asset);
+        window.minSize = new Vector2(480f, 520f);
+        window.TryFindDatabase();
+        window.TryFindJson();
     }
 
-    [MenuItem("Quran Kids/Import Ordered Quran Data")]
-    private static void ImportOrderedQuranData()
+    [MenuItem("Quran Kids/Configure Four Required Surahs")]
+    public static void ConfigureRequiredSurahs()
     {
-        string jsonPath =
-            EditorUtility.OpenFilePanel(
-                "Select ordered_quran_phonemes.json",
-                Application.dataPath,
-                "json");
+        QuranDatabaseBuilder window =
+            GetWindow<QuranDatabaseBuilder>("Quran Database Builder");
 
-        if (string.IsNullOrEmpty(jsonPath))
-            return;
+        window.minSize = new Vector2(480f, 520f);
+        window.surahNumbers = "1,112,113,114";
+        window.TryFindDatabase();
+        window.TryFindJson();
+        window.Import();
+    }
 
-        QuranDatabase database =
-            Selection.activeObject as QuranDatabase;
+    private void OnGUI()
+    {
+        EditorGUILayout.Space(8f);
 
-        if (database == null)
+        EditorGUILayout.LabelField(
+            "Quran Database Builder",
+            EditorStyles.boldLabel);
+
+        EditorGUILayout.HelpBox(
+            "This database stores only the enabled surahs, verse numbers, and audio references. " +
+            "Arabic text and phoneme data remain in ordered_quran_phonemes.json.",
+            MessageType.Info);
+
+        EditorGUILayout.Space(6f);
+
+        database = (QuranDatabase)EditorGUILayout.ObjectField(
+            "Quran Database",
+            database,
+            typeof(QuranDatabase),
+            false);
+
+        orderedQuranPhonemesJson = (TextAsset)EditorGUILayout.ObjectField(
+            "Ordered Quran JSON",
+            orderedQuranPhonemesJson,
+            typeof(TextAsset),
+            false);
+
+        EditorGUILayout.Space(6f);
+
+        EditorGUILayout.LabelField(
+            "Surah Numbers",
+            EditorStyles.boldLabel);
+
+        surahNumbers = EditorGUILayout.TextField(
+            surahNumbers);
+
+        EditorGUILayout.HelpBox(
+            "Enter Quran surah numbers separated by commas. Example: 1,112,113,114. " +
+            "You can later replace this with any surah numbers you want.",
+            MessageType.None);
+
+        EditorGUILayout.Space(6f);
+
+        using (new EditorGUILayout.HorizontalScope())
         {
-            string[] guids =
-                AssetDatabase.FindAssets(
-                    "t:QuranDatabase");
-
-            if (guids.Length == 1)
+            if (GUILayout.Button("Find Assets", GUILayout.Height(30f)))
             {
-                string path =
-                    AssetDatabase.GUIDToAssetPath(
-                        guids[0]);
+                TryFindDatabase();
+                TryFindJson();
+            }
 
-                database =
-                    AssetDatabase.LoadAssetAtPath<QuranDatabase>(
-                        path);
+            if (GUILayout.Button("Import / Rebuild", GUILayout.Height(30f)))
+            {
+                Import();
             }
         }
+
+        EditorGUILayout.Space(8f);
+
+        using (new EditorGUI.DisabledScope(database == null))
+        {
+            if (GUILayout.Button("Clear Database", GUILayout.Height(28f)))
+            {
+                ClearDatabase();
+            }
+        }
+
+        EditorGUILayout.Space(8f);
+
+        if (!string.IsNullOrEmpty(status))
+        {
+            scroll = EditorGUILayout.BeginScrollView(scroll);
+            EditorGUILayout.HelpBox(status, MessageType.Info);
+            EditorGUILayout.EndScrollView();
+        }
+
+        EditorGUILayout.Space(8f);
+
+        if (database != null)
+        {
+            DrawCurrentDatabaseSummary();
+        }
+    }
+
+    private void DrawCurrentDatabaseSummary()
+    {
+        EditorGUILayout.LabelField(
+            "Current Database",
+            EditorStyles.boldLabel);
+
+        if (database.surahs == null || database.surahs.Length == 0)
+        {
+            EditorGUILayout.LabelField("No surahs configured.");
+            return;
+        }
+
+        for (int i = 0; i < database.surahs.Length; i++)
+        {
+            SurahData surah = database.surahs[i];
+
+            if (surah == null)
+                continue;
+
+            int verseCount =
+                surah.verses == null ? 0 : surah.verses.Length;
+
+            EditorGUILayout.LabelField(
+                surah.number + " - " + surah.nameArabic,
+                verseCount + " verses");
+        }
+    }
+
+    private void TryFindDatabase()
+    {
+        if (database != null)
+            return;
+
+        string[] guids =
+            AssetDatabase.FindAssets("t:QuranDatabase");
+
+        if (guids.Length == 0)
+            return;
+
+        string path =
+            AssetDatabase.GUIDToAssetPath(guids[0]);
+
+        database =
+            AssetDatabase.LoadAssetAtPath<QuranDatabase>(path);
+    }
+
+    private void TryFindJson()
+    {
+        if (orderedQuranPhonemesJson != null)
+            return;
+
+        string[] guids =
+            AssetDatabase.FindAssets("ordered_quran_phonemes t:TextAsset");
+
+        if (guids.Length == 0)
+            return;
+
+        string path =
+            AssetDatabase.GUIDToAssetPath(guids[0]);
+
+        orderedQuranPhonemesJson =
+            AssetDatabase.LoadAssetAtPath<TextAsset>(path);
+    }
+
+    private void Import()
+    {
+        status = string.Empty;
 
         if (database == null)
         {
             EditorUtility.DisplayDialog(
                 "Quran Database",
-                "Select a QuranDatabase asset first.",
+                "QuranDatabase.asset was not found.",
                 "OK");
+            return;
+        }
 
+        if (orderedQuranPhonemesJson == null)
+        {
+            EditorUtility.DisplayDialog(
+                "Quran JSON",
+                "ordered_quran_phonemes.json was not found.",
+                "OK");
+            return;
+        }
+
+        List<int> selectedSurahs;
+
+        try
+        {
+            selectedSurahs = ParseSurahNumbers(surahNumbers);
+        }
+        catch (Exception ex)
+        {
+            EditorUtility.DisplayDialog(
+                "Invalid Surah Numbers",
+                ex.Message,
+                "OK");
+            return;
+        }
+
+        if (selectedSurahs.Count == 0)
+        {
+            EditorUtility.DisplayDialog(
+                "Invalid Surah Numbers",
+                "Enter at least one surah number.",
+                "OK");
             return;
         }
 
         try
         {
-            string json =
-                System.IO.File.ReadAllText(jsonPath);
+            Dictionary<string, QuranVerseJsonData> allVerses =
+                QuranJsonParser.ParseVerses(
+                    orderedQuranPhonemesJson.text);
 
-            Dictionary<string, QuranVerseJsonData> verses =
-                QuranJsonParser.ParseVerses(json);
+            Dictionary<int, SurahData> oldSurahs =
+                BuildExistingSurahMap(database.surahs);
 
-            if (verses.Count == 0)
-                throw new InvalidOperationException(
-                    "No Quran verses were found in ordered_quran_phonemes.json.");
+            List<SurahData> newSurahs =
+                new List<SurahData>();
 
-            Dictionary<int, SurahData> existingSurahs =
-                new Dictionary<int, SurahData>();
+            int totalVerses = 0;
+            int missingVerses = 0;
 
-            if (database.surahs != null)
+            for (int i = 0; i < selectedSurahs.Count; i++)
             {
-                for (int i = 0; i < database.surahs.Length; i++)
-                {
-                    SurahData surah =
-                        database.surahs[i];
-
-                    if (surah == null)
-                        continue;
-
-                    existingSurahs[surah.number] =
-                        surah;
-                }
-            }
-
-            Dictionary<int, List<int>> verseNumbers =
-                new Dictionary<int, List<int>>();
-
-            foreach (string key in verses.Keys)
-            {
-                string[] parts =
-                    key.Split(':');
-
-                if (parts.Length != 2)
-                    continue;
-
-                int surahNumber;
-                int verseNumber;
-
-                if (!int.TryParse(
-                        parts[0],
-                        out surahNumber))
-                {
-                    continue;
-                }
-
-                if (!int.TryParse(
-                        parts[1],
-                        out verseNumber))
-                {
-                    continue;
-                }
-
-                List<int> list;
-
-                if (!verseNumbers.TryGetValue(
-                        surahNumber,
-                        out list))
-                {
-                    list = new List<int>();
-                    verseNumbers[surahNumber] = list;
-                }
-
-                if (!list.Contains(verseNumber))
-                    list.Add(verseNumber);
-            }
-
-            List<int> surahNumbers =
-                new List<int>(verseNumbers.Keys);
-
-            surahNumbers.Sort();
-
-            SurahData[] newSurahs =
-                new SurahData[surahNumbers.Count];
-
-            for (int i = 0; i < surahNumbers.Count; i++)
-            {
-                int surahNumber =
-                    surahNumbers[i];
+                int surahNumber = selectedSurahs[i];
 
                 SurahData surah;
 
-                if (existingSurahs.TryGetValue(
+                if (!oldSurahs.TryGetValue(
                         surahNumber,
-                        out surah) &&
-                    surah != null)
+                        out surah) ||
+                    surah == null)
                 {
-                    if (string.IsNullOrWhiteSpace(
-                        surah.nameArabic))
-                    {
-                        surah.nameArabic =
-                            $"سوره {surahNumber}";
-                    }
-
-                    if (string.IsNullOrWhiteSpace(
-                        surah.namePersian))
-                    {
-                        surah.namePersian =
-                            $"سوره {surahNumber}";
-                    }
+                    surah = CreateSurahData(surahNumber);
                 }
                 else
                 {
-                    surah = new SurahData
-                    {
-                        number = surahNumber,
-                        nameArabic = $"سوره {surahNumber}",
-                        namePersian = $"سوره {surahNumber}"
-                    };
+                    surah.nameArabic = GetSurahArabicName(surahNumber);
+                    surah.namePersian = GetSurahPersianName(surahNumber);
                 }
 
-                List<int> numbers =
-                    verseNumbers[surahNumber];
+                List<VerseData> newVerses =
+                    new List<VerseData>();
 
-                numbers.Sort();
-
-                VerseData[] verseArray =
-                    new VerseData[numbers.Count];
-
-                for (int v = 0; v < numbers.Count; v++)
+                foreach (KeyValuePair<string, QuranVerseJsonData> pair in allVerses)
                 {
-                    int verseNumber =
-                        numbers[v];
+                    int parsedSurah;
+                    int parsedVerse;
+
+                    if (!TryParseKey(
+                            pair.Key,
+                            out parsedSurah,
+                            out parsedVerse))
+                    {
+                        continue;
+                    }
+
+                    if (parsedSurah != surahNumber)
+                        continue;
 
                     VerseData existingVerse =
                         FindVerse(
                             surah.verses,
-                            verseNumber);
+                            parsedVerse);
 
                     if (existingVerse == null)
                     {
                         existingVerse =
                             new VerseData
                             {
-                                number = verseNumber
+                                number = parsedVerse,
+                                audio = null
                             };
                     }
+                    else
+                    {
+                        existingVerse.number = parsedVerse;
+                    }
 
-                    verseArray[v] = existingVerse;
+                    newVerses.Add(existingVerse);
+                    totalVerses++;
                 }
 
-                surah.verses = verseArray;
-                newSurahs[i] = surah;
+                newVerses.Sort(
+                    delegate (VerseData a, VerseData b)
+                    {
+                        return a.number.CompareTo(b.number);
+                    });
+
+                if (newVerses.Count == 0)
+                {
+                    missingVerses++;
+                    continue;
+                }
+
+                surah.verses = newVerses.ToArray();
+                newSurahs.Add(surah);
             }
 
-            database.surahs = newSurahs;
+            newSurahs.Sort(
+                delegate (SurahData a, SurahData b)
+                {
+                    return a.number.CompareTo(b.number);
+                });
+
+            Undo.RecordObject(database, "Configure Quran Database");
+
+            database.surahs = newSurahs.ToArray();
 
             EditorUtility.SetDirty(database);
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
 
+            status =
+                "Database updated successfully.\n\n" +
+                "Surahs: " + string.Join(", ", selectedSurahs.Select(x => x.ToString()).ToArray()) + "\n" +
+                "Total verses: " + totalVerses + "\n" +
+                "Missing surahs in JSON: " + missingVerses + "\n\n" +
+                "AudioClip fields were preserved when possible and are currently empty for new verses.";
+
             EditorUtility.DisplayDialog(
                 "Quran Database Updated",
-                $"Loaded {verses.Count} verses from the official JSON source.\n\n" +
-                "The database now stores verse numbers/audio only.\n" +
-                "Arabic text and phoneme data are read from ordered_quran_phonemes.json at runtime.",
+                status,
                 "OK");
         }
         catch (Exception ex)
@@ -246,139 +362,96 @@ public static class QuranDatabaseBuilder
         }
     }
 
-    [MenuItem("Quran Kids/Validate Quran JSON")]
-    private static void ValidateQuranJson()
+    private void ClearDatabase()
     {
-        string jsonPath =
-            EditorUtility.OpenFilePanel(
-                "Select ordered_quran_phonemes.json",
-                Application.dataPath,
-                "json");
-
-        if (string.IsNullOrEmpty(jsonPath))
+        if (database == null)
             return;
 
-        try
+        if (!EditorUtility.DisplayDialog(
+                "Clear Quran Database",
+                "This removes all configured surahs from the asset. Continue?",
+                "Clear",
+                "Cancel"))
         {
-            string json =
-                System.IO.File.ReadAllText(jsonPath);
-
-            Dictionary<string, QuranVerseJsonData> verses =
-                QuranJsonParser.ParseVerses(json);
-
-            int missingText = 0;
-            int missingPhonemes = 0;
-            int invalidList = 0;
-
-            foreach (KeyValuePair<string, QuranVerseJsonData> pair in verses)
-            {
-                QuranVerseJsonData verse =
-                    pair.Value;
-
-                if (string.IsNullOrWhiteSpace(
-                    verse.ayaText))
-                {
-                    missingText++;
-                }
-
-                if (string.IsNullOrWhiteSpace(
-                    verse.AyaPhoneme))
-                {
-                    missingPhonemes++;
-                }
-
-                if (verse.ayaPhonemesList == null ||
-                    verse.ayaPhonemesList.Count == 0)
-                {
-                    invalidList++;
-                }
-            }
-
-            EditorUtility.DisplayDialog(
-                "Quran JSON Validation",
-                $"Verses: {verses.Count}\n" +
-                $"Missing text: {missingText}\n" +
-                $"Missing phoneme: {missingPhonemes}\n" +
-                $"Invalid phoneme list: {invalidList}",
-                "OK");
+            return;
         }
-        catch (Exception ex)
-        {
-            Debug.LogException(ex);
 
-            EditorUtility.DisplayDialog(
-                "Validation Failed",
-                ex.Message,
-                "OK");
-        }
+        Undo.RecordObject(database, "Clear Quran Database");
+        database.surahs = new SurahData[0];
+        EditorUtility.SetDirty(database);
+        AssetDatabase.SaveAssets();
+
+        status = "Database cleared.";
     }
 
-    [MenuItem("Quran Kids/Validate Quran Database")]
-    private static void ValidateDatabase()
+    private static List<int> ParseSurahNumbers(string value)
     {
-        string[] guids =
-            AssetDatabase.FindAssets(
-                "t:QuranDatabase");
+        List<int> result = new List<int>();
 
-        int databases = 0;
-        int surahs = 0;
-        int verses = 0;
-        int invalidVerses = 0;
+        if (string.IsNullOrWhiteSpace(value))
+            return result;
 
-        for (int i = 0; i < guids.Length; i++)
+        string[] parts =
+            value.Split(
+                new[] { ',', ' ', ';', '\t', '\r', '\n' },
+                StringSplitOptions.RemoveEmptyEntries);
+
+        for (int i = 0; i < parts.Length; i++)
         {
-            string path =
-                AssetDatabase.GUIDToAssetPath(
-                    guids[i]);
+            int number;
 
-            QuranDatabase db =
-                AssetDatabase.LoadAssetAtPath<QuranDatabase>(
-                    path);
-
-            if (db == null)
-                continue;
-
-            databases++;
-
-            if (db.surahs == null)
-                continue;
-
-            for (int s = 0; s < db.surahs.Length; s++)
+            if (!int.TryParse(parts[i], out number))
             {
-                SurahData surah =
-                    db.surahs[s];
-
-                if (surah == null)
-                    continue;
-
-                surahs++;
-
-                if (surah.verses == null)
-                    continue;
-
-                for (int v = 0; v < surah.verses.Length; v++)
-                {
-                    VerseData verse =
-                        surah.verses[v];
-
-                    if (verse == null ||
-                        verse.number <= 0)
-                    {
-                        invalidVerses++;
-                        continue;
-                    }
-
-                    verses++;
-                }
+                throw new Exception(
+                    "Invalid surah number: " + parts[i]);
             }
+
+            if (number < 1 || number > 114)
+            {
+                throw new Exception(
+                    "Surah number must be between 1 and 114: " + number);
+            }
+
+            if (!result.Contains(number))
+                result.Add(number);
         }
 
-        Debug.Log(
-            $"Quran database validation | " +
-            $"Databases={databases} | " +
-            $"Surahs={surahs} | " +
-            $"Verses={verses} | " +
-            $"Invalid={invalidVerses}");
+        result.Sort();
+        return result;
+    }
+
+    private static Dictionary<int, SurahData> BuildExistingSurahMap(
+        SurahData[] surahs)
+    {
+        Dictionary<int, SurahData> result =
+            new Dictionary<int, SurahData>();
+
+        if (surahs == null)
+            return result;
+
+        for (int i = 0; i < surahs.Length; i++)
+        {
+            SurahData surah = surahs[i];
+
+            if (surah == null)
+                continue;
+
+            if (!result.ContainsKey(surah.number))
+                result.Add(surah.number, surah);
+        }
+
+        return result;
+    }
+
+    private static SurahData CreateSurahData(int number)
+    {
+        return new SurahData
+        {
+            number = number,
+            nameArabic = GetSurahArabicName(number),
+            namePersian = GetSurahPersianName(number),
+            verses = new VerseData[0]
+        };
     }
 
     private static VerseData FindVerse(
@@ -398,6 +471,51 @@ public static class QuranDatabaseBuilder
         }
 
         return null;
+    }
+
+    private static bool TryParseKey(
+        string key,
+        out int surah,
+        out int verse)
+    {
+        surah = 0;
+        verse = 0;
+
+        if (string.IsNullOrWhiteSpace(key))
+            return false;
+
+        string[] parts = key.Split(':');
+
+        if (parts.Length != 2)
+            return false;
+
+        return
+            int.TryParse(parts[0], out surah) &&
+            int.TryParse(parts[1], out verse);
+    }
+
+    private static string GetSurahArabicName(int number)
+    {
+        switch (number)
+        {
+            case 1: return "الفاتحة";
+            case 112: return "الإخلاص";
+            case 113: return "الفلق";
+            case 114: return "الناس";
+            default: return "سورة " + number;
+        }
+    }
+
+    private static string GetSurahPersianName(int number)
+    {
+        switch (number)
+        {
+            case 1: return "سوره فاتحه";
+            case 112: return "سوره اخلاص";
+            case 113: return "سوره فلق";
+            case 114: return "سوره ناس";
+            default: return "سوره " + number;
+        }
     }
 }
 
