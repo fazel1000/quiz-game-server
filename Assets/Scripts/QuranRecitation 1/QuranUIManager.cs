@@ -64,6 +64,9 @@ public class QuranUIManager : MonoBehaviour
         if (quranRepository != null && !quranRepository.IsReady)
             quranRepository.Initialize();
 
+        if (recorder != null)
+            recorder.RecordingFinished += OnRecordingFinished;
+
         BuildSurahList();
 
         if (playButton != null)
@@ -71,6 +74,12 @@ public class QuranUIManager : MonoBehaviour
             playButton.onClick.RemoveAllListeners();
             playButton.onClick.AddListener(ReplayCurrentVerse);
         }
+    }
+
+    private void OnDestroy()
+    {
+        if (recorder != null)
+            recorder.RecordingFinished -= OnRecordingFinished;
     }
 
     public void OpenQuranPanel()
@@ -362,8 +371,13 @@ public class QuranUIManager : MonoBehaviour
             return;
         }
 
-        AudioClip recording =
-            recorder.StopRecording();
+        recorder.StopRecording();
+    }
+
+    private void OnRecordingFinished(AudioClip recording)
+    {
+        if (recording == null || isAssessing)
+            return;
 
         _ = EvaluateRecordingAsync(recording);
     }

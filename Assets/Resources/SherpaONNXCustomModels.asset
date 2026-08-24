@@ -15,20 +15,20 @@ MonoBehaviour:
   _entries:
   - enabled: 1
     entryType: 0
-    name: QuranZipformerV31
-    modelId: QuranZipformerV31
+    name: quran-streaming-zipformer2-ctc
+    modelId: quran-streaming-zipformer2-ctc
     moduleType: 1
     moduleTypeHint: 
     downloadUrl: 
     downloadFileHash: 
     numberOfSpeakers: 0
     sampleRate: 16000
-    modelTypeHint: 
+    modelTypeHint: Online_Zipformer2Ctc
     fileBindings:
+    - key: 1
+      path: model.int8.onnx
     - key: 5
       path: tokens.txt
-    - key: 35
-      path: zipformer_p_arabic_v3.1.int8.onnx
     remoteManifestUrl: 
   _models: []
   _remoteManifests: []

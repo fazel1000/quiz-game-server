@@ -18,19 +18,19 @@ MonoBehaviour:
     namePersian: "\u0633\u0648\u0631\u0647 \u0641\u0627\u062A\u062D\u0647"
     verses:
     - number: 1
-      audio: {fileID: 0}
+      audio: {fileID: 8300000, guid: 9bc040e647f2c1a4ebeea234f61f204c, type: 3}
     - number: 2
-      audio: {fileID: 0}
+      audio: {fileID: 8300000, guid: 4fc37cd5404e5ab41aa0ce7ea619ab93, type: 3}
     - number: 3
-      audio: {fileID: 0}
+      audio: {fileID: 8300000, guid: c51da621c869fe14cac52d6c7a76570f, type: 3}
     - number: 4
-      audio: {fileID: 0}
+      audio: {fileID: 8300000, guid: 814f05b289b6b0442bca495ff4b4c5e1, type: 3}
     - number: 5
-      audio: {fileID: 0}
+      audio: {fileID: 8300000, guid: f091f735c0beab945afcfd212394d720, type: 3}
     - number: 6
-      audio: {fileID: 0}
+      audio: {fileID: 8300000, guid: 2fc1399c1ed0de24caf41950cf6820c7, type: 3}
     - number: 7
-      audio: {fileID: 0}
+      audio: {fileID: 8300000, guid: 52520154212dc3f40ad02287f7015401, type: 3}
   - number: 112
     nameArabic: "\u0627\u0644\u0625\u062E\u0644\u0627\u0635"
     namePersian: "\u0633\u0648\u0631\u0647 \u0627\u062E\u0644\u0627\u0635"

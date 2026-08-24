@@ -1,21 +1,17 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
+using Eitan.Sherpa.Onnx.Unity.Mono.Components;
 using UnityEngine;
-
-#if SHERPA_ONNX
-using PonyuDev.SherpaOnnx.Asr.Offline;
-#endif
 
 public class QuranAssessmentEngine : MonoBehaviour
 {
     [Header("Quran Data")]
     [SerializeField] private QuranJsonRepository quranRepository;
 
-    [Header("Sherpa-ONNX")]
-#if SHERPA_ONNX
-    [SerializeField] private AsrOrchestrator asrOrchestrator;
-#endif
+    [Header("SherpaONNXUnity (EitanWong)")]
+    [SerializeField] private RealtimeSpeechRecognizerComponent realtimeSpeechRecognizer;
 
     [Header("Scoring")]
     [SerializeField, Range(0f, 100f)] private float excellentThreshold = 90f;
@@ -26,14 +22,10 @@ public class QuranAssessmentEngine : MonoBehaviour
     {
         get
         {
-#if SHERPA_ONNX
             return quranRepository != null &&
                    quranRepository.IsReady &&
-                   asrOrchestrator != null &&
-                   asrOrchestrator.IsInitialized;
-#else
-            return false;
-#endif
+                   realtimeSpeechRecognizer != null &&
+                   realtimeSpeechRecognizer.IsInitialized;
         }
     }
 
@@ -76,32 +68,27 @@ public class QuranAssessmentEngine : MonoBehaviour
                 $"Expected phoneme tokens are missing for {surahNumber}:{verseNumber}.");
         }
 
-#if !SHERPA_ONNX
-        return QuranAssessmentResult.Failed(
-            "Unity-Sherpa-ONNX is not installed or SHERPA_ONNX is not enabled.");
-#else
-        if (asrOrchestrator == null)
-            return QuranAssessmentResult.Failed("AsrOrchestrator is not assigned.");
+        if (realtimeSpeechRecognizer == null)
+        {
+            return QuranAssessmentResult.Failed(
+                "RealtimeSpeechRecognizerComponent is not assigned.");
+        }
 
-        if (!asrOrchestrator.IsInitialized)
-            await WaitForInitializationAsync();
+        if (!realtimeSpeechRecognizer.IsInitialized)
+            await InitializeRecognizerAsync();
 
-        if (!asrOrchestrator.IsInitialized)
+        if (!realtimeSpeechRecognizer.IsInitialized)
+        {
             return QuranAssessmentResult.Failed(
                 "Quran phoneme model is not initialized.");
+        }
 
         try
         {
-            AsrResult result =
-                await asrOrchestrator.RecognizeFromClipAsync(recording);
+            string recognizedText =
+                await realtimeSpeechRecognizer.TranscribeClipAsync(recording);
 
-            if (result == null || !result.IsValid)
-            {
-                return QuranAssessmentResult.Failed(
-                    "The model did not return a valid phoneme sequence.");
-            }
-
-            List<string> actual = ExtractAndNormalizeTokens(result);
+            List<string> actual = TokenizeRecognizedText(recognizedText);
 
             if (actual.Count == 0)
             {
@@ -131,50 +118,25 @@ public class QuranAssessmentEngine : MonoBehaviour
             Debug.LogException(ex, this);
             return QuranAssessmentResult.Failed(ex.Message);
         }
-#endif
     }
 
-#if SHERPA_ONNX
-    private async Task WaitForInitializationAsync()
+    private async Task InitializeRecognizerAsync()
     {
-        float startTime = Time.realtimeSinceStartup;
-
-        while (asrOrchestrator != null &&
-               !asrOrchestrator.IsInitialized)
+        using (CancellationTokenSource timeout =
+               new CancellationTokenSource(
+                   TimeSpan.FromSeconds(initializationTimeoutSeconds)))
         {
-            if (Time.realtimeSinceStartup - startTime >=
-                initializationTimeoutSeconds)
+            try
             {
-                break;
+                await realtimeSpeechRecognizer
+                    .StartRecognizerAsync(timeout.Token);
             }
-
-            await Task.Delay(50);
+            catch (OperationCanceledException)
+            {
+                // The readiness check below returns the user-facing error.
+            }
         }
     }
-
-    private List<string> ExtractAndNormalizeTokens(AsrResult result)
-    {
-        List<string> normalized = new List<string>();
-
-        if (result.Tokens != null && result.Tokens.Length > 0)
-        {
-            for (int i = 0; i < result.Tokens.Length; i++)
-            {
-                string raw = result.Tokens[i];
-
-                if (string.IsNullOrWhiteSpace(raw))
-                    continue;
-
-                AddNormalizedToken(raw, normalized);
-            }
-
-            if (normalized.Count > 0)
-                return normalized;
-        }
-
-        return TokenizeRecognizedText(result.Text);
-    }
-#endif
 
     private void AddNormalizedToken(
         string raw,
