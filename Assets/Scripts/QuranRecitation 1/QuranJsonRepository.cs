@@ -1,13 +1,19 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Text;
 using UnityEngine;
 
 public sealed class QuranJsonRepository : MonoBehaviour
 {
+    [Header("Offline Quran Data")]
     [SerializeField] private TextAsset orderedQuranPhonemesJson;
+
+    [Tooltip("Optional. If empty, tokens.txt is loaded from StreamingAssets/tokens.txt.")]
     [SerializeField] private TextAsset tokensText;
+
+    [SerializeField] private string tokensStreamingAssetsPath = "tokens.txt";
 
     private Dictionary<string, QuranVerseJsonData> verses;
     private List<string> vocabulary;
@@ -25,22 +31,20 @@ public sealed class QuranJsonRepository : MonoBehaviour
     {
         IsReady = false;
 
-        if (orderedQuranPhonemesJson == null)
-        {
-            Debug.LogError("QuranJsonRepository: ordered_quran_phonemes.json is not assigned.", this);
-            return;
-        }
-
-        if (tokensText == null)
-        {
-            Debug.LogError("QuranJsonRepository: tokens.txt is not assigned.", this);
-            return;
-        }
-
         try
         {
-            verses = QuranJsonParser.ParseVerses(orderedQuranPhonemesJson.text);
-            LoadTokens(tokensText.text);
+            string json = LoadJsonText();
+
+            if (string.IsNullOrWhiteSpace(json))
+                throw new Exception("ordered_quran_phonemes.json could not be loaded.");
+
+            string tokenText = LoadTokensText();
+
+            if (string.IsNullOrWhiteSpace(tokenText))
+                throw new Exception("tokens.txt could not be loaded.");
+
+            verses = QuranJsonParser.ParseVerses(json);
+            LoadTokens(tokenText);
 
             if (verses == null || verses.Count == 0)
                 throw new Exception("No Quran verses were loaded from ordered_quran_phonemes.json.");
@@ -51,7 +55,10 @@ public sealed class QuranJsonRepository : MonoBehaviour
             IsReady = true;
 
             Debug.Log(
-                $"QuranJsonRepository initialized. Verses={verses.Count}, Tokens={vocabulary.Count}",
+                "QuranJsonRepository initialized. Verses=" +
+                verses.Count +
+                ", Tokens=" +
+                vocabulary.Count,
                 this);
         }
         catch (Exception ex)
@@ -60,81 +67,164 @@ public sealed class QuranJsonRepository : MonoBehaviour
         }
     }
 
-    public bool TryGetVerse(int surahNumber, int verseNumber, out QuranVerseJsonData verse)
+    private string LoadJsonText()
     {
-        return TryGetVerse($"{surahNumber}:{verseNumber}", out verse);
+        if (orderedQuranPhonemesJson != null)
+            return orderedQuranPhonemesJson.text;
+
+        string path =
+            Path.Combine(
+                Application.streamingAssetsPath,
+                "ordered_quran_phonemes.json");
+
+        if (File.Exists(path))
+            return File.ReadAllText(path, Encoding.UTF8);
+
+        return string.Empty;
     }
 
-    public bool TryGetVerse(string key, out QuranVerseJsonData verse)
+    private string LoadTokensText()
+    {
+        if (tokensText != null)
+            return tokensText.text;
+
+        string path =
+            Path.Combine(
+                Application.streamingAssetsPath,
+                tokensStreamingAssetsPath);
+
+        if (File.Exists(path))
+            return File.ReadAllText(path, Encoding.UTF8);
+
+        Debug.LogError(
+            "QuranJsonRepository: tokens.txt was not found at: " +
+            path,
+            this);
+
+        return string.Empty;
+    }
+
+    public bool TryGetVerse(
+        int surahNumber,
+        int verseNumber,
+        out QuranVerseJsonData verse)
+    {
+        return TryGetVerse(
+            surahNumber + ":" + verseNumber,
+            out verse);
+    }
+
+    public bool TryGetVerse(
+        string key,
+        out QuranVerseJsonData verse)
     {
         verse = null;
 
-        if (!IsReady || verses == null || string.IsNullOrWhiteSpace(key))
+        if (!IsReady ||
+            verses == null ||
+            string.IsNullOrWhiteSpace(key))
+        {
             return false;
+        }
 
-        return verses.TryGetValue(key.Trim(), out verse);
+        return verses.TryGetValue(
+            key.Trim(),
+            out verse);
     }
 
-    public string GetVerseText(int surahNumber, int verseNumber)
-    {
-        QuranVerseJsonData verse;
-        return TryGetVerse(surahNumber, verseNumber, out verse)
-            ? verse.ayaText
-            : string.Empty;
-    }
-
-    public List<string> GetExpectedTokens(int surahNumber, int verseNumber)
+    public string GetVerseText(
+        int surahNumber,
+        int verseNumber)
     {
         QuranVerseJsonData verse;
 
-        if (!TryGetVerse(surahNumber, verseNumber, out verse))
+        if (!TryGetVerse(
+            surahNumber,
+            verseNumber,
+            out verse))
+        {
+            return string.Empty;
+        }
+
+        return verse.ayaText;
+    }
+
+    public List<string> GetExpectedTokens(
+        int surahNumber,
+        int verseNumber)
+    {
+        QuranVerseJsonData verse;
+
+        if (!TryGetVerse(
+            surahNumber,
+            verseNumber,
+            out verse))
+        {
             return new List<string>();
+        }
 
-        return TokenizePhonemeSequence(verse.AyaPhoneme);
+        return TokenizePhonemeSequence(
+            verse.AyaPhoneme);
     }
 
-    public List<string> TokenizePhonemeSequence(string phonemeSequence)
+    public List<string> TokenizePhonemeSequence(
+        string phonemeSequence)
     {
-        List<string> result = new List<string>();
+        List<string> result =
+            new List<string>();
 
-        if (string.IsNullOrWhiteSpace(phonemeSequence))
+        if (string.IsNullOrWhiteSpace(
+            phonemeSequence))
+        {
             return result;
+        }
 
-        string[] words = phonemeSequence
-            .Trim()
-            .Split(new[] { ' ', '\t', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+        string[] words =
+            phonemeSequence
+                .Trim()
+                .Split(
+                    new[] { ' ', '\t', '\r', '\n' },
+                    StringSplitOptions.RemoveEmptyEntries);
 
         for (int i = 0; i < words.Length; i++)
-        {
             TokenizeWord(words[i], result);
-        }
 
         return result;
     }
 
-    public bool TryGetTokenId(string token, out int id)
+    public bool TryGetTokenId(
+        string token,
+        out int id)
     {
-        if (tokenToId == null)
+        id = -1;
+
+        if (tokenToId == null ||
+            string.IsNullOrEmpty(token))
         {
-            id = -1;
             return false;
         }
 
-        return tokenToId.TryGetValue(token, out id);
+        return tokenToId.TryGetValue(
+            token,
+            out id);
     }
 
-    public bool TryGetTokenById(int id, out string token)
+    public bool TryGetTokenById(
+        int id,
+        out string token)
     {
+        token = null;
+
         if (idToToken == null)
-        {
-            token = null;
             return false;
-        }
 
-        return idToToken.TryGetValue(id, out token);
+        return idToToken.TryGetValue(
+            id,
+            out token);
     }
 
-    public bool IsVocabularyToken(string token)
+    public bool IsVocabularyToken(
+        string token)
     {
         return !string.IsNullOrEmpty(token) &&
                tokenToId != null &&
@@ -143,31 +233,59 @@ public sealed class QuranJsonRepository : MonoBehaviour
 
     private void LoadTokens(string text)
     {
-        vocabulary = new List<string>();
-        tokenToId = new Dictionary<string, int>(StringComparer.Ordinal);
-        idToToken = new Dictionary<int, string>();
+        vocabulary =
+            new List<string>();
 
-        string[] lines = text.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+        tokenToId =
+            new Dictionary<string, int>(
+                StringComparer.Ordinal);
+
+        idToToken =
+            new Dictionary<int, string>();
+
+        string[] lines =
+            text.Split(
+                new[] { '\r', '\n' },
+                StringSplitOptions.RemoveEmptyEntries);
 
         for (int i = 0; i < lines.Length; i++)
         {
-            string line = lines[i].Trim();
+            string line =
+                lines[i].Trim();
 
             if (string.IsNullOrEmpty(line))
                 continue;
 
-            int separator = line.LastIndexOf(' ');
+            int separator =
+                line.LastIndexOf(' ');
 
-            if (separator <= 0 || separator >= line.Length - 1)
+            if (separator <= 0 ||
+                separator >= line.Length - 1)
+            {
                 continue;
+            }
 
-            string token = line.Substring(0, separator).Trim();
-            string idText = line.Substring(separator + 1).Trim();
+            string token =
+                line.Substring(
+                    0,
+                    separator)
+                .Trim();
+
+            string idText =
+                line.Substring(
+                    separator + 1)
+                .Trim();
 
             int id;
 
-            if (!int.TryParse(idText, NumberStyles.Integer, CultureInfo.InvariantCulture, out id))
+            if (!int.TryParse(
+                idText,
+                NumberStyles.Integer,
+                CultureInfo.InvariantCulture,
+                out id))
+            {
                 continue;
+            }
 
             if (token == "<blank>")
             {
@@ -184,16 +302,24 @@ public sealed class QuranJsonRepository : MonoBehaviour
             vocabulary.Add(token);
         }
 
-        vocabulary.Sort((a, b) =>
-        {
-            int lengthCompare = b.Length.CompareTo(a.Length);
-            return lengthCompare != 0
-                ? lengthCompare
-                : string.CompareOrdinal(a, b);
-        });
+        vocabulary.Sort(
+            delegate(string a, string b)
+            {
+                int lengthCompare =
+                    b.Length.CompareTo(a.Length);
+
+                if (lengthCompare != 0)
+                    return lengthCompare;
+
+                return string.CompareOrdinal(
+                    a,
+                    b);
+            });
     }
 
-    private void TokenizeWord(string word, List<string> result)
+    private void TokenizeWord(
+        string word,
+        List<string> result)
     {
         if (string.IsNullOrEmpty(word))
             return;
@@ -204,17 +330,28 @@ public sealed class QuranJsonRepository : MonoBehaviour
         {
             string bestToken = null;
 
-            for (int i = 0; i < vocabulary.Count; i++)
+            for (int i = 0;
+                 i < vocabulary.Count;
+                 i++)
             {
-                string token = vocabulary[i];
+                string token =
+                    vocabulary[i];
 
                 if (token.Length == 0)
                     continue;
 
-                if (position + token.Length > word.Length)
+                if (position + token.Length >
+                    word.Length)
+                {
                     continue;
+                }
 
-                if (string.CompareOrdinal(word, position, token, 0, token.Length) == 0)
+                if (string.CompareOrdinal(
+                    word,
+                    position,
+                    token,
+                    0,
+                    token.Length) == 0)
                 {
                     bestToken = token;
                     break;
@@ -224,7 +361,11 @@ public sealed class QuranJsonRepository : MonoBehaviour
             if (bestToken == null)
             {
                 throw new InvalidOperationException(
-                    $"Cannot tokenize Quran phoneme sequence at character {position}: \"{word}\"");
+                    "Cannot tokenize Quran phoneme sequence at character " +
+                    position +
+                    ": \"" +
+                    word +
+                    "\"");
             }
 
             result.Add(bestToken);
@@ -244,7 +385,8 @@ public sealed class QuranVerseJsonData
 
 public static class QuranJsonParser
 {
-    public static Dictionary<string, QuranVerseJsonData> ParseVerses(string json)
+    public static Dictionary<string, QuranVerseJsonData> ParseVerses(
+        string json)
     {
         Dictionary<string, QuranVerseJsonData> result =
             new Dictionary<string, QuranVerseJsonData>();
@@ -252,11 +394,17 @@ public static class QuranJsonParser
         if (string.IsNullOrWhiteSpace(json))
             return result;
 
-        object root = JsonLiteParser.Parse(json);
-        Dictionary<string, object> rootObject = root as Dictionary<string, object>;
+        object root =
+            JsonLiteParser.Parse(json);
+
+        Dictionary<string, object> rootObject =
+            root as Dictionary<string, object>;
 
         if (rootObject == null)
-            throw new Exception("ordered_quran_phonemes.json root is not a JSON object.");
+        {
+            throw new Exception(
+                "ordered_quran_phonemes.json root is not a JSON object.");
+        }
 
         foreach (KeyValuePair<string, object> pair in rootObject)
         {
@@ -266,13 +414,24 @@ public static class QuranJsonParser
             if (verseObject == null)
                 continue;
 
-            QuranVerseJsonData verse = new QuranVerseJsonData
-            {
-                key = pair.Key,
-                ayaText = GetString(verseObject, "aya_text"),
-                AyaPhoneme = GetString(verseObject, "aya_phoneme"),
-                ayaPhonemesList = GetStringList(verseObject, "aya_phonemes_list")
-            };
+            QuranVerseJsonData verse =
+                new QuranVerseJsonData();
+
+            verse.key = pair.Key;
+            verse.ayaText =
+                GetString(
+                    verseObject,
+                    "aya_text");
+
+            verse.AyaPhoneme =
+                GetString(
+                    verseObject,
+                    "aya_phoneme");
+
+            verse.ayaPhonemesList =
+                GetStringList(
+                    verseObject,
+                    "aya_phonemes_list");
 
             result[pair.Key] = verse;
         }
@@ -280,34 +439,52 @@ public static class QuranJsonParser
         return result;
     }
 
-    private static string GetString(Dictionary<string, object> obj, string key)
+    private static string GetString(
+        Dictionary<string, object> obj,
+        string key)
     {
         object value;
 
-        return obj.TryGetValue(key, out value) && value != null
-            ? value.ToString()
-            : string.Empty;
+        if (obj.TryGetValue(
+            key,
+            out value) &&
+            value != null)
+        {
+            return value.ToString();
+        }
+
+        return string.Empty;
     }
 
     private static List<string> GetStringList(
         Dictionary<string, object> obj,
         string key)
     {
-        List<string> result = new List<string>();
+        List<string> result =
+            new List<string>();
+
         object value;
 
-        if (!obj.TryGetValue(key, out value))
+        if (!obj.TryGetValue(
+            key,
+            out value))
+        {
             return result;
+        }
 
-        List<object> list = value as List<object>;
+        List<object> list =
+            value as List<object>;
 
         if (list == null)
             return result;
 
-        for (int i = 0; i < list.Count; i++)
+        for (int i = 0;
+             i < list.Count;
+             i++)
         {
             if (list[i] != null)
-                result.Add(list[i].ToString());
+                result.Add(
+                    list[i].ToString());
         }
 
         return result;
@@ -331,7 +508,8 @@ internal static class JsonLiteParser
             SkipWhitespace();
 
             if (index >= json.Length)
-                throw new Exception("Unexpected end of JSON.");
+                throw new Exception(
+                    "Unexpected end of JSON.");
 
             char c = json[index];
 
@@ -383,12 +561,15 @@ internal static class JsonLiteParser
             {
                 SkipWhitespace();
 
-                string key = ParseString();
+                string key =
+                    ParseString();
 
                 SkipWhitespace();
                 Expect(':');
 
-                object value = ParseValue();
+                object value =
+                    ParseValue();
+
                 obj[key] = value;
 
                 SkipWhitespace();
@@ -407,7 +588,8 @@ internal static class JsonLiteParser
 
         private List<object> ParseArray()
         {
-            List<object> list = new List<object>();
+            List<object> list =
+                new List<object>();
 
             Expect('[');
             SkipWhitespace();
@@ -420,7 +602,8 @@ internal static class JsonLiteParser
 
             while (true)
             {
-                list.Add(ParseValue());
+                list.Add(
+                    ParseValue());
 
                 SkipWhitespace();
 
@@ -440,11 +623,13 @@ internal static class JsonLiteParser
         {
             Expect('"');
 
-            StringBuilder builder = new StringBuilder();
+            StringBuilder builder =
+                new StringBuilder();
 
             while (index < json.Length)
             {
-                char c = json[index++];
+                char c =
+                    json[index++];
 
                 if (c == '"')
                     return builder.ToString();
@@ -456,36 +641,78 @@ internal static class JsonLiteParser
                 }
 
                 if (index >= json.Length)
-                    throw new Exception("Invalid JSON escape.");
+                {
+                    throw new Exception(
+                        "Invalid JSON escape.");
+                }
 
-                char escape = json[index++];
+                char escape =
+                    json[index++];
 
                 switch (escape)
                 {
-                    case '"': builder.Append('"'); break;
-                    case '\\': builder.Append('\\'); break;
-                    case '/': builder.Append('/'); break;
-                    case 'b': builder.Append('\b'); break;
-                    case 'f': builder.Append('\f'); break;
-                    case 'n': builder.Append('\n'); break;
-                    case 'r': builder.Append('\r'); break;
-                    case 't': builder.Append('\t'); break;
+                    case '"':
+                        builder.Append('"');
+                        break;
+
+                    case '\\':
+                        builder.Append('\\');
+                        break;
+
+                    case '/':
+                        builder.Append('/');
+                        break;
+
+                    case 'b':
+                        builder.Append('\b');
+                        break;
+
+                    case 'f':
+                        builder.Append('\f');
+                        break;
+
+                    case 'n':
+                        builder.Append('\n');
+                        break;
+
+                    case 'r':
+                        builder.Append('\r');
+                        break;
+
+                    case 't':
+                        builder.Append('\t');
+                        break;
 
                     case 'u':
-                        if (index + 4 > json.Length)
-                            throw new Exception("Invalid Unicode escape.");
+                        if (index + 4 >
+                            json.Length)
+                        {
+                            throw new Exception(
+                                "Invalid Unicode escape.");
+                        }
 
-                        string hex = json.Substring(index, 4);
-                        builder.Append((char)Convert.ToInt32(hex, 16));
+                        string hex =
+                            json.Substring(
+                                index,
+                                4);
+
+                        builder.Append(
+                            (char)Convert.ToInt32(
+                                hex,
+                                16));
+
                         index += 4;
                         break;
 
                     default:
-                        throw new Exception("Unknown JSON escape: \\" + escape);
+                        throw new Exception(
+                            "Unknown JSON escape: \\" +
+                            escape);
                 }
             }
 
-            throw new Exception("Unterminated JSON string.");
+            throw new Exception(
+                "Unterminated JSON string.");
         }
 
         private object ParseNumber()
@@ -494,7 +721,8 @@ internal static class JsonLiteParser
 
             while (index < json.Length)
             {
-                char c = json[index];
+                char c =
+                    json[index];
 
                 if ((c >= '0' && c <= '9') ||
                     c == '-' ||
@@ -510,7 +738,10 @@ internal static class JsonLiteParser
                 break;
             }
 
-            string number = json.Substring(start, index - start);
+            string number =
+                json.Substring(
+                    start,
+                    index - start);
 
             double value;
 
@@ -520,7 +751,9 @@ internal static class JsonLiteParser
                 CultureInfo.InvariantCulture,
                 out value))
             {
-                throw new Exception("Invalid JSON number: " + number);
+                throw new Exception(
+                    "Invalid JSON number: " +
+                    number);
             }
 
             return value;
@@ -528,36 +761,55 @@ internal static class JsonLiteParser
 
         private void SkipWhitespace()
         {
-            while (index < json.Length && char.IsWhiteSpace(json[index]))
+            while (index < json.Length &&
+                   char.IsWhiteSpace(
+                       json[index]))
+            {
                 index++;
+            }
         }
 
         private bool Peek(char expected)
         {
-            return index < json.Length && json[index] == expected;
+            return index < json.Length &&
+                   json[index] == expected;
         }
 
         private void Expect(char expected)
         {
             SkipWhitespace();
 
-            if (index >= json.Length || json[index] != expected)
+            if (index >= json.Length ||
+                json[index] != expected)
+            {
                 throw new Exception(
-                    $"Expected '{expected}' at JSON position {index}.");
+                    "Expected '" +
+                    expected +
+                    "' at JSON position " +
+                    index +
+                    ".");
+            }
 
             index++;
         }
 
         private void Expect(string expected)
         {
-            if (index + expected.Length > json.Length ||
+            if (index + expected.Length >
+                json.Length ||
                 !string.Equals(
-                    json.Substring(index, expected.Length),
+                    json.Substring(
+                        index,
+                        expected.Length),
                     expected,
                     StringComparison.Ordinal))
             {
                 throw new Exception(
-                    $"Expected '{expected}' at JSON position {index}.");
+                    "Expected '" +
+                    expected +
+                    "' at JSON position " +
+                    index +
+                    ".");
             }
 
             index += expected.Length;
