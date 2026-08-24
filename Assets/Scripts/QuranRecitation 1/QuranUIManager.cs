@@ -24,6 +24,7 @@ public class QuranUIManager : MonoBehaviour
     [SerializeField] private RTLTextMeshPro verseText;
     [SerializeField] private RTLTextMeshPro verseTitle;
     [SerializeField] private AudioSource audioSource;
+    [SerializeField] private Button playButton;
 
     [Header("Data")]
     [SerializeField] private QuranDatabase database;
@@ -44,6 +45,8 @@ public class QuranUIManager : MonoBehaviour
 
     private int currentSurahIndex = -1;
     private int currentVerseIndex = -1;
+    private AudioClip currentVerseAudio;
+    private bool isPlayingVerse;
 
     private void Awake()
     {
@@ -58,6 +61,12 @@ public class QuranUIManager : MonoBehaviour
         HideInstant(versePanel, verseGroup);
 
         BuildSurahList();
+
+        if (playButton != null)
+        {
+            playButton.onClick.RemoveAllListeners();
+            playButton.onClick.AddListener(ReplayCurrentVerse);
+        }
     }
 
     // =========================
@@ -243,6 +252,8 @@ public class QuranUIManager : MonoBehaviour
         VerseData verse =
             surah.verses[verseIndex];
 
+        currentVerseAudio = verse.audio;
+
         currentSurahIndex = surahIndex;
         currentVerseIndex = verseIndex;
 
@@ -280,6 +291,34 @@ public class QuranUIManager : MonoBehaviour
 
         if (clip != null)
             audioSource.Play();
+    }
+
+    public void ReplayCurrentVerse()
+    {
+        if (isPlayingVerse || currentVerseAudio == null || audioSource == null)
+            return;
+
+        audioSource.Stop();
+        audioSource.clip = currentVerseAudio;
+        audioSource.Play();
+
+        StartCoroutine(WaitForAudioFinish());
+    }
+
+    private IEnumerator WaitForAudioFinish()
+    {
+        isPlayingVerse = true;
+
+        if (playButton != null)
+            playButton.interactable = false;
+
+        while (audioSource != null && audioSource.isPlaying)
+            yield return null;
+
+        isPlayingVerse = false;
+
+        if (playButton != null)
+            playButton.interactable = true;
     }
 
     private void StopAudio()
@@ -339,9 +378,9 @@ public class QuranUIManager : MonoBehaviour
         string recognizedText = "";
 
         float score =
-            pronunciationScore.Compare(
-                verse.arabicText,
-                recognizedText);
+            pronunciationScore.CompareAudio(
+                verse.audio,
+                recording);
 
         SetPercent(score);
     }

@@ -1,53 +1,39 @@
 using UnityEngine;
+using RTLTMPro;
 
 public class PronunciationScore : MonoBehaviour
 {
-    // مرحله اول: فقط رابط امتیازدهی.
-    // در مرحله بعدی موتور تشخیص گفتار عربی به این کلاس متصل می‌شود.
-    public float Compare(string referenceText, string recognizedText)
+    [SerializeField] private PronunciationAnalyzer analyzer;
+    [SerializeField] private RTLTextMeshPro percentText;
+
+
+    public float CompareAudio(AudioClip referenceClip, AudioClip recordedClip)
     {
-        if (string.IsNullOrWhiteSpace(referenceText) ||
-            string.IsNullOrWhiteSpace(recognizedText))
-            return 0f;
-
-        string[] reference = Normalize(referenceText).Split(' ');
-        string[] recognized = Normalize(recognizedText).Split(' ');
-
-        int[,] dp = new int[reference.Length + 1, recognized.Length + 1];
-
-        for (int i = 0; i <= reference.Length; i++) dp[i, 0] = i;
-        for (int j = 0; j <= recognized.Length; j++) dp[0, j] = j;
-
-        for (int i = 1; i <= reference.Length; i++)
+        if (referenceClip == null || recordedClip == null)
         {
-            for (int j = 1; j <= recognized.Length; j++)
-            {
-                int cost = reference[i - 1] == recognized[j - 1] ? 0 : 1;
-
-                dp[i, j] = Mathf.Min(
-                    Mathf.Min(dp[i - 1, j] + 1, dp[i, j - 1] + 1),
-                    dp[i - 1, j - 1] + cost);
-            }
+            Debug.LogWarning("Audio clip is missing");
+            return 0f;
         }
 
-        int maxLength = Mathf.Max(reference.Length, recognized.Length);
-        if (maxLength == 0) return 0f;
+        if (analyzer == null)
+        {
+            Debug.LogWarning("Pronunciation Analyzer is missing");
+            return 0f;
+        }
 
-        return Mathf.Clamp01(1f - (float)dp[reference.Length, recognized.Length] / maxLength) * 100f;
+        float score = analyzer.Analyze(referenceClip, recordedClip);
+
+        ShowScore(score);
+
+        return score;
     }
 
-    private string Normalize(string value)
+
+    private void ShowScore(float score)
     {
-        return value
-            .Replace("َ", "")
-            .Replace("ِ", "")
-            .Replace("ُ", "")
-            .Replace("ّ", "")
-            .Replace("ْ", "")
-            .Replace("ً", "")
-            .Replace("ٍ", "")
-            .Replace("ٌ", "")
-            .Replace("ـ", "")
-            .Trim();
+        score = Mathf.Clamp(score, 0, 100);
+
+        if (percentText != null)
+            percentText.text = Mathf.RoundToInt(score) + "%";
     }
 }

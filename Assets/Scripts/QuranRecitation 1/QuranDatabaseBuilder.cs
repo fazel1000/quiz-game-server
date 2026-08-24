@@ -1,3 +1,5 @@
+#if UNITY_EDITOR
+
 using UnityEditor;
 using UnityEngine;
 
@@ -7,9 +9,16 @@ public static class QuranDatabaseBuilder
     private static void CreateDatabase()
     {
         QuranDatabase asset = ScriptableObject.CreateInstance<QuranDatabase>();
-        AssetDatabase.CreateAsset(asset, "Assets/QuranKids/QuranDatabase.asset");
+
+        AssetDatabase.CreateAsset(
+            asset,
+            "Assets/QuranKids/QuranDatabase.asset"
+        );
+
         AssetDatabase.SaveAssets();
         Selection.activeObject = asset;
         EditorGUIUtility.PingObject(asset);
     }
 }
+
+#endif
