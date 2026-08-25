@@ -24,7 +24,19 @@ public class QuranAssessmentEngine : MonoBehaviour
     [SerializeField, Range(0f, 100f)] private float goodThreshold = 75f;
     [SerializeField, Min(1f)] private float initializationTimeoutSeconds = 120f;
 
+    [Header("Independent Clip Transcription")]
+    [Tooltip("Adds guaranteed silence to the end of each recorded clip so the online recognizer detects an endpoint and resets its stream.")]
+    [SerializeField, Range(0f, 5f)] private float trailingSilencePaddingSeconds = 3f;
+
+    [Tooltip("Safety net for recognizer versions that still return previous transcriptions as a prefix.")]
+    [SerializeField] private bool removeAccumulatedRecognizerPrefix = true;
+
     private Task<string> startupModelPreparationTask;
+    private readonly SemaphoreSlim transcriptionGate =
+        new SemaphoreSlim(1, 1);
+
+    private readonly List<string> previousRecognizerOutputTokens =
+        new List<string>();
 
     public bool IsReady
     {
@@ -114,10 +126,39 @@ public class QuranAssessmentEngine : MonoBehaviour
 
         try
         {
-            string recognizedText =
-                await realtimeSpeechRecognizer.TranscribeClipAsync(recording);
+            List<string> actual;
 
-            List<string> actual = TokenizeRecognizedText(recognizedText);
+            await transcriptionGate.WaitAsync();
+
+            try
+            {
+                AudioClip recognitionClip =
+                    CreateRecognitionClipWithTrailingSilence(recording);
+
+                try
+                {
+                    string recognizedText =
+                        await realtimeSpeechRecognizer
+                            .TranscribeClipAsync(recognitionClip);
+
+                    List<string> rawActual =
+                        TokenizeRecognizedText(recognizedText);
+
+                    actual = ExtractCurrentUtteranceTokens(rawActual);
+                }
+                finally
+                {
+                    if (recognitionClip != null &&
+                        recognitionClip != recording)
+                    {
+                        Destroy(recognitionClip);
+                    }
+                }
+            }
+            finally
+            {
+                transcriptionGate.Release();
+            }
 
             if (actual.Count == 0)
             {
@@ -396,6 +437,102 @@ public class QuranAssessmentEngine : MonoBehaviour
         return result;
     }
 
+    private AudioClip CreateRecognitionClipWithTrailingSilence(
+        AudioClip recording)
+    {
+        if (recording == null ||
+            trailingSilencePaddingSeconds <= 0f)
+        {
+            return recording;
+        }
+
+        int paddingFrames =
+            Mathf.CeilToInt(
+                recording.frequency *
+                trailingSilencePaddingSeconds);
+
+        if (paddingFrames <= 0)
+            return recording;
+
+        int originalSampleCount =
+            recording.samples * recording.channels;
+
+        float[] originalSamples =
+            new float[originalSampleCount];
+
+        if (!recording.GetData(originalSamples, 0))
+            return recording;
+
+        AudioClip paddedClip = AudioClip.Create(
+            recording.name + "_EndpointPadded",
+            recording.samples + paddingFrames,
+            recording.channels,
+            recording.frequency,
+            false);
+
+        if (!paddedClip.SetData(originalSamples, 0))
+        {
+            Destroy(paddedClip);
+            return recording;
+        }
+
+        return paddedClip;
+    }
+
+    private List<string> ExtractCurrentUtteranceTokens(
+        List<string> rawActual)
+    {
+        List<string> current =
+            rawActual == null
+                ? new List<string>()
+                : new List<string>(rawActual);
+
+        if (removeAccumulatedRecognizerPrefix &&
+            previousRecognizerOutputTokens.Count > 0 &&
+            current.Count > previousRecognizerOutputTokens.Count &&
+            StartsWithTokens(
+                current,
+                previousRecognizerOutputTokens))
+        {
+            current.RemoveRange(
+                0,
+                previousRecognizerOutputTokens.Count);
+        }
+
+        previousRecognizerOutputTokens.Clear();
+
+        if (rawActual != null)
+            previousRecognizerOutputTokens.AddRange(rawActual);
+
+        return current;
+    }
+
+    private static bool StartsWithTokens(
+        List<string> value,
+        List<string> prefix)
+    {
+        if (value == null ||
+            prefix == null ||
+            prefix.Count == 0 ||
+            value.Count < prefix.Count)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < prefix.Count; i++)
+        {
+            if (!string.Equals(
+                    value[i],
+                    prefix[i],
+                    StringComparison.Ordinal))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     private static Alignment Align(
         List<string> expected,
         List<string> actual)
@@ -411,7 +548,9 @@ public class QuranAssessmentEngine : MonoBehaviour
                 TokenWeight(expected[i - 1]);
 
         for (int j = 1; j <= m; j++)
-            distance[0, j] += 0.5f * TokenWeight(actual[j - 1]);
+            distance[0, j] =
+                distance[0, j - 1] +
+                0.5f * TokenWeight(actual[j - 1]);
 
         for (int i = 1; i <= n; i++)
         {
@@ -509,6 +648,8 @@ public class QuranAssessmentEngine : MonoBehaviour
         for (int i = 0; i < expected.Count; i++)
             result.totalExpectedWeight += TokenWeight(expected[i]);
 
+        result.totalErrorWeight = distance[n, m];
+
         return result;
     }
 
@@ -524,66 +665,11 @@ public class QuranAssessmentEngine : MonoBehaviour
         if (totalWeight <= 0f)
             return 0f;
 
-        float errorWeight =
-            0f;
-
-        errorWeight +=
-            WeightedSubstitutionCost(
-                expected,
-                alignment.substitutions);
-
-        errorWeight +=
-            WeightedDeletionCost(
-                expected,
-                alignment.deletions);
-
-        errorWeight +=
-            alignment.insertions * 0.5f;
-
         float score =
             100f *
-            (1f - errorWeight / totalWeight);
+            (1f - alignment.totalErrorWeight / totalWeight);
 
         return Mathf.Clamp(score, 0f, 100f);
-    }
-
-    private static float WeightedSubstitutionCost(
-        List<string> expected,
-        int count)
-    {
-        if (count <= 0 || expected == null || expected.Count == 0)
-            return 0f;
-
-        float average =
-            AverageTokenWeight(expected);
-
-        return count * average;
-    }
-
-    private static float WeightedDeletionCost(
-        List<string> expected,
-        int count)
-    {
-        if (count <= 0 || expected == null || expected.Count == 0)
-            return 0f;
-
-        float average =
-            AverageTokenWeight(expected);
-
-        return count * average;
-    }
-
-    private static float AverageTokenWeight(List<string> tokens)
-    {
-        if (tokens == null || tokens.Count == 0)
-            return 1f;
-
-        float sum = 0f;
-
-        for (int i = 0; i < tokens.Count; i++)
-            sum += TokenWeight(tokens[i]);
-
-        return sum / tokens.Count;
     }
 
     private static float TokenWeight(string token)
@@ -634,6 +720,7 @@ public class QuranAssessmentEngine : MonoBehaviour
         public int deletions;
         public int insertions;
         public float totalExpectedWeight;
+        public float totalErrorWeight;
     }
 }
 
