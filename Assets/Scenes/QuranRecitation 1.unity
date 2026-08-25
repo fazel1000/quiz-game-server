@@ -1502,9 +1502,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bc9519cef6fb019479872e82a395a556, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  orderedQuranPhonemesJson: {fileID: 4900000, guid: e345050bfecbd0f45b5bd8d6c1945d39, type: 3}
-  tokensText: {fileID: 0}
-  tokensStreamingAssetsPath: sherpa-onnx/models/speech-recognition/quran-streaming-zipformer2-ctc/tokens.txt
+  orderedQuranPhonemesJson: {fileID: 4900000, guid: 86560a2d05d7ecb4080f60a8ced3da06, type: 3}
+  tokensText: {fileID: 4900000, guid: 09d0be24f8d2dc04e9d51421ce8c8e2c, type: 3}
+  tokensStreamingAssetsPath: 
 --- !u!1 &683054840
 GameObject:
   m_ObjectHideFlags: 0
