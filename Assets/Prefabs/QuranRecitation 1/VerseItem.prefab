@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 2124011787116576566}
   - component: {fileID: 8699705008000581767}
   - component: {fileID: 5851050956737213447}
+  - component: {fileID: 3797682224427749224}
   m_Layer: 0
   m_Name: VerseItem
   m_TagString: Untagged
@@ -121,6 +122,27 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &3797682224427749224
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4115284058803821730}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c9f35c7645a5fe84285b3260c96a67c3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  button: {fileID: 0}
+  animationTarget: {fileID: 0}
+  pressedScale: 0.92
+  pressDuration: 0.08
+  releaseDuration: 0.12
+  pressEase: 6
+  releaseEase: 27
+  hapticStrength: 1
+  soundType: 4
 --- !u!1 &7738403604268923655
 GameObject:
   m_ObjectHideFlags: 0
@@ -186,12 +208,11 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "\uFE91\u0650\uFEB4\u0652\uFEE2\u0650 \uFE8D\uFEDF\uFEE0\uFC60\uFEEA\u0650
-    \uFE8D\uFEDF\uFEAE\uFC60\uFEA3\u0652\uFEE4\u064E\uFEE6\u0650 \uFE8D\uFEDF\uFEAE\uFC60\uFEA3\u0650\uFBFF\uFEE2\u0650
-    \uFD3F\uFD3E"
+  m_text: "\uFE91\u0650\uFEB4\u0652\uFEE2\u0650 \u0671\uFEDF\uFEE0\uFC60\uFEEA\u0650
+    \u0671\uFEDF\uFEAE\uFC60\uFEA3\u0652\uFEE4\u064E\u0640\u0670\uFEE6\u0650 \u0671\uFEDF\uFEAE\uFC60\uFEA3\u0650\uFBFF\uFEE2\u0650\""
   m_isRightToLeft: 1
-  m_fontAsset: {fileID: 11400000, guid: 5c16d784c9684924ab445d8926439b17, type: 2}
-  m_sharedMaterial: {fileID: 8183864436318979531, guid: 5c16d784c9684924ab445d8926439b17, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 02388eef4b4d2a446ba66ba17d8d4364, type: 2}
+  m_sharedMaterial: {fileID: -6020797996165506499, guid: 02388eef4b4d2a446ba66ba17d8d4364, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -215,17 +236,17 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 10
-  m_fontSizeBase: 36
+  m_fontSize: 88.49
+  m_fontSizeBase: 88.49
   m_fontWeight: 400
-  m_enableAutoSizing: 1
+  m_enableAutoSizing: 0
   m_fontSizeMin: 10
   m_fontSizeMax: 100
   m_fontStyle: 0
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 512
   m_textAlignment: 65535
-  m_characterSpacing: 0
+  m_characterSpacing: -0.04
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -261,8 +282,8 @@ MonoBehaviour:
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
   preserveNumbers: 0
   farsi: 1
-  originalText: "\u0628\u0650\u0633\u0652\u0645\u0650 \u0627\u0644\u0644\u0651\u064E\u0647\u0650
-    \u0627\u0644\u0631\u0651\u064E\u062D\u0652\u0645\u064E\u0646\u0650 \u0627\u0644\u0631\u0651\u064E\u062D\u0650\u064A\u0645\u0650
-    \uFD3F\uFD3E"
+  originalText: "\u0628\u0650\u0633\u0652\u0645\u0650 \u0671\u0644\u0644\u0651\u064E\u0647\u0650
+    \u0671\u0644\u0631\u0651\u064E\u062D\u0652\u0645\u064E\u0640\u0670\u0646\u0650
+    \u0671\u0644\u0631\u0651\u064E\u062D\u0650\u064A\u0645\u0650\""
   fixTags: 1
   forceFix: 0

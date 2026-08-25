@@ -9870,6 +9870,14 @@ MonoBehaviour:
       m_MarkPositionAdjustment:
         m_XPositionAdjustment: 0
         m_YPositionAdjustment: 0
+    - m_BaseGlyphID: 300
+      m_BaseGlyphAnchorPoint:
+        m_XCoordinate: 27.685547
+        m_YCoordinate: 50.756836
+      m_MarkGlyphID: 295
+      m_MarkPositionAdjustment:
+        m_XPositionAdjustment: 0
+        m_YPositionAdjustment: 0
     - m_BaseGlyphID: 397
       m_BaseGlyphAnchorPoint:
         m_XCoordinate: 17.138672

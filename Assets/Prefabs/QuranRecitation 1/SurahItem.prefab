@@ -153,6 +153,7 @@ GameObject:
   - component: {fileID: 1405293487973185163}
   - component: {fileID: 5675156911978910619}
   - component: {fileID: 3484399359490953647}
+  - component: {fileID: 6410965104389630569}
   m_Layer: 0
   m_Name: SurahItem
   m_TagString: Untagged
@@ -262,3 +263,24 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &6410965104389630569
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7002161695116634401}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c9f35c7645a5fe84285b3260c96a67c3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  button: {fileID: 0}
+  animationTarget: {fileID: 0}
+  pressedScale: 0.92
+  pressDuration: 0.08
+  releaseDuration: 0.12
+  pressEase: 6
+  releaseEase: 27
+  hapticStrength: 1
+  soundType: 3
