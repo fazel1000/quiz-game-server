@@ -211,8 +211,8 @@ MonoBehaviour:
   m_text: "\uFE91\u0650\uFEB4\u0652\uFEE2\u0650 \u0671\uFEDF\uFEE0\uFC60\uFEEA\u0650
     \u0671\uFEDF\uFEAE\uFC60\uFEA3\u0652\uFEE4\u064E\u0640\u0670\uFEE6\u0650 \u0671\uFEDF\uFEAE\uFC60\uFEA3\u0650\uFBFF\uFEE2\u0650\""
   m_isRightToLeft: 1
-  m_fontAsset: {fileID: 11400000, guid: 02388eef4b4d2a446ba66ba17d8d4364, type: 2}
-  m_sharedMaterial: {fileID: -6020797996165506499, guid: 02388eef4b4d2a446ba66ba17d8d4364, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 13a17df3255a4f649a545640cbd04ff4, type: 2}
+  m_sharedMaterial: {fileID: -9030970254887995143, guid: 13a17df3255a4f649a545640cbd04ff4, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []

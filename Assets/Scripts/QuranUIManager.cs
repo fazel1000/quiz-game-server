@@ -1,6 +1,3 @@
-using System.Collections;
-using System.Threading.Tasks;
-using RTLTMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -22,9 +19,13 @@ public class QuranUIManager : MonoBehaviour
     [SerializeField] private Transform verseContent;
     [SerializeField] private Button verseFramePrefab;
 
+    [Header("Arabic Verse Text")]
+    [Tooltip("Removes characters that the selected TMP font and its fallbacks cannot display, so missing glyph squares are not shown.")]
+    [SerializeField] private bool hideUnsupportedVerseCharacters = true;
+
     [Header("Progress, Stars & Locks")]
     [Tooltip("Shows earned stars / required stars for the current surah, for example 12/28.")]
-    [SerializeField] private RTLTextMeshPro surahProgressText;
+    [SerializeField] private global::RTLTMPro.RTLTextMeshPro surahProgressText;
 
     [Tooltip("Assign exactly 6 sprites in order: 0Stars, 1Star, 2Stars, 3Stars, 4Stars, 5Stars.")]
     [SerializeField] private Sprite[] verseStarSprites = new Sprite[6];
@@ -39,8 +40,8 @@ public class QuranUIManager : MonoBehaviour
     [SerializeField] private Vector2 progressStarOffset = new Vector2(-8f, 0f);
 
     [Header("Verse Panel")]
-    [SerializeField] private RTLTextMeshPro verseText;
-    [SerializeField] private RTLTextMeshPro verseTitle;
+    [SerializeField] private global::RTLTMPro.RTLTextMeshPro verseText;
+    [SerializeField] private global::RTLTMPro.RTLTextMeshPro verseTitle;
     [SerializeField] private AudioSource audioSource;
     [SerializeField] private Button playButton;
 
@@ -51,7 +52,11 @@ public class QuranUIManager : MonoBehaviour
     [Header("Recording & Assessment")]
     [SerializeField] private QuranRecorder recorder;
     [SerializeField] private QuranAssessmentEngine assessmentEngine;
-    [SerializeField] private RTLTextMeshPro percentText;
+    [SerializeField] private global::RTLTMPro.RTLTextMeshPro percentText;
+    [Tooltip("Shown above the Record button until the speech recognizer is ready.")]
+    [SerializeField] private global::RTLTMPro.RTLTextMeshPro recognizerLoadingText;
+    [Tooltip("Image object containing the Loading text. It is hidden when the recognizer becomes ready.")]
+    [SerializeField] private Image recognizerLoadingBackgroundImage;
 
     [Header("Record Button Visual")]
     [Tooltip("Image component on the Record button.")]
@@ -84,6 +89,7 @@ public class QuranUIManager : MonoBehaviour
     private bool isAssessing;
     private Image progressStarImage;
     private Sprite defaultRecordButtonSprite;
+    private Button recordButton;
 
     private void Awake()
     {
@@ -95,9 +101,16 @@ public class QuranUIManager : MonoBehaviour
         verseGroup = PrepareGroup(versePanel);
 
         if (recordButtonImage != null)
+        {
             defaultRecordButtonSprite = recordButtonImage.sprite;
+            recordButton =
+                recordButtonImage.GetComponentInParent<Button>();
+        }
 
         SetRecordingButtonVisual(false);
+        SetRecognizerReadyState(
+            assessmentEngine != null && assessmentEngine.IsReady);
+        StartCoroutine(WaitForRecognizerReady());
 
         ShowInstant(mainMenuPanel, mainGroup);
         HideInstant(quranPanel, quranGroup);
@@ -249,8 +262,9 @@ public class QuranUIManager : MonoBehaviour
                     database,
                     capturedIndex);
 
-            RTLTextMeshPro text =
-                button.GetComponentInChildren<RTLTextMeshPro>(true);
+            global::RTLTMPro.RTLTextMeshPro text =
+                button.GetComponentInChildren<
+                    global::RTLTMPro.RTLTextMeshPro>(true);
 
             if (text != null)
                 text.text = database.surahs[i].namePersian;
@@ -332,14 +346,17 @@ public class QuranUIManager : MonoBehaviour
                     surah,
                     capturedIndex);
 
-            RTLTextMeshPro text =
-                frame.GetComponentInChildren<RTLTextMeshPro>(true);
+            global::RTLTMPro.RTLTextMeshPro text =
+                frame.GetComponentInChildren<
+                    global::RTLTMPro.RTLTextMeshPro>(true);
 
             if (text != null)
             {
-                text.text = GetVerseText(
-                    surah.number,
-                    verse.number);
+                text.text = PrepareVerseTextForFont(
+                    GetVerseText(
+                        surah.number,
+                        verse.number),
+                    text);
             }
 
             frame.onClick.RemoveAllListeners();
@@ -408,9 +425,11 @@ public class QuranUIManager : MonoBehaviour
 
         if (verseText != null)
         {
-            verseText.text = GetVerseText(
-                surah.number,
-                verse.number);
+            verseText.text = PrepareVerseTextForFont(
+                GetVerseText(
+                    surah.number,
+                    verse.number),
+                verseText);
         }
 
         ResetPercent();
@@ -434,9 +453,74 @@ public class QuranUIManager : MonoBehaviour
             return string.Empty;
         }
 
-        return quranRepository.GetVerseText(
+        return quranRepository.GetVerseDisplayText(
             surahNumber,
             verseNumber);
+    }
+
+    private string PrepareVerseTextForFont(
+        string value,
+        global::RTLTMPro.RTLTextMeshPro targetText)
+    {
+        if (!hideUnsupportedVerseCharacters ||
+            string.IsNullOrEmpty(value) ||
+            targetText == null ||
+            targetText.font == null)
+        {
+            return value;
+        }
+
+        global::TMPro.TMP_FontAsset fontAsset = targetText.font;
+        global::System.Text.StringBuilder filtered =
+            new global::System.Text.StringBuilder(value.Length);
+
+        foreach (char character in value)
+        {
+            if (IsTextSpacingOrDirectionCharacter(character) ||
+                fontAsset.HasCharacter(
+                    character,
+                    true,
+                    true))
+            {
+                filtered.Append(character);
+                continue;
+            }
+
+            // Preserve the base letter when Alef Wasla is unsupported.
+            if (character == '\u0671' &&
+                fontAsset.HasCharacter(
+                    '\u0627',
+                    true,
+                    true))
+            {
+                filtered.Append('\u0627');
+                continue;
+            }
+
+            // The Imlaei display text already contains every normal Alef
+            // in its correct place. If the font lacks superscript Alef,
+            // remove only that unsupported mark (and an optional Tatweel).
+            if (character == '\u0670')
+            {
+                if (filtered.Length > 0 &&
+                    filtered[filtered.Length - 1] == '\u0640')
+                {
+                    filtered.Length--;
+                }
+            }
+        }
+
+        return filtered.ToString();
+    }
+
+    private static bool IsTextSpacingOrDirectionCharacter(
+        char character)
+    {
+        return char.IsWhiteSpace(character) ||
+               character == '\u200C' ||
+               character == '\u200D' ||
+               character == '\u200E' ||
+               character == '\u200F';
     }
 
     private void PlayVerseAudio(AudioClip clip)
@@ -467,7 +551,7 @@ public class QuranUIManager : MonoBehaviour
         StartCoroutine(WaitForAudioFinish());
     }
 
-    private IEnumerator WaitForAudioFinish()
+    private global::System.Collections.IEnumerator WaitForAudioFinish()
     {
         isPlayingVerse = true;
 
@@ -492,9 +576,40 @@ public class QuranUIManager : MonoBehaviour
             audioSource.Stop();
     }
 
+    private global::System.Collections.IEnumerator WaitForRecognizerReady()
+    {
+        while (assessmentEngine != null &&
+               !assessmentEngine.IsReady)
+        {
+            yield return null;
+        }
+
+        SetRecognizerReadyState(
+            assessmentEngine != null && assessmentEngine.IsReady);
+    }
+
+    private void SetRecognizerReadyState(bool isReady)
+    {
+        if (recordButton != null)
+            recordButton.interactable = isReady;
+
+        if (recognizerLoadingBackgroundImage != null)
+        {
+            recognizerLoadingBackgroundImage.gameObject.SetActive(
+                !isReady);
+        }
+
+        if (recognizerLoadingText != null)
+        {
+            recognizerLoadingText.gameObject.SetActive(!isReady);
+        }
+    }
+
     public void ToggleRecording()
     {
         if (recorder == null ||
+            assessmentEngine == null ||
+            !assessmentEngine.IsReady ||
             isAssessing)
         {
             return;
@@ -542,7 +657,7 @@ public class QuranUIManager : MonoBehaviour
         recordButtonImage.sprite = defaultRecordButtonSprite;
     }
 
-    private async Task EvaluateRecordingAsync(
+    private async global::System.Threading.Tasks.Task EvaluateRecordingAsync(
         AudioClip recording)
     {
         if (recording == null ||
@@ -784,7 +899,7 @@ public class QuranUIManager : MonoBehaviour
         imageObject.transform.SetAsLastSibling();
     }
 
-    private IEnumerator SwitchPanel(
+    private global::System.Collections.IEnumerator SwitchPanel(
         GameObject fromObject,
         CanvasGroup fromGroup,
         GameObject toObject,

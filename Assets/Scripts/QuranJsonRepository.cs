@@ -149,6 +149,29 @@ public sealed class QuranJsonRepository : MonoBehaviour
         return verse.ayaText;
     }
 
+    public string GetVerseDisplayText(
+        int surahNumber,
+        int verseNumber)
+    {
+        QuranVerseJsonData verse;
+
+        if (!TryGetVerse(
+            surahNumber,
+            verseNumber,
+            out verse))
+        {
+            return string.Empty;
+        }
+
+        if (!string.IsNullOrWhiteSpace(
+            verse.ayaDisplayText))
+        {
+            return verse.ayaDisplayText;
+        }
+
+        return verse.ayaText;
+    }
+
     public List<string> GetExpectedTokens(
         int surahNumber,
         int verseNumber)
@@ -379,6 +402,7 @@ public sealed class QuranVerseJsonData
 {
     public string key;
     public string ayaText;
+    public string ayaDisplayText;
     public string AyaPhoneme;
     public List<string> ayaPhonemesList;
 }
@@ -422,6 +446,11 @@ public static class QuranJsonParser
                 GetString(
                     verseObject,
                     "aya_text");
+
+            verse.ayaDisplayText =
+                GetString(
+                    verseObject,
+                    "aya_display_text");
 
             verse.AyaPhoneme =
                 GetString(
