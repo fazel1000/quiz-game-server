@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Eitan.Sherpa.Onnx.Unity.Mono.Components;
 using UnityEngine;
+using UnityEngine.Networking;
 
 public class QuranAssessmentEngine : MonoBehaviour
 {
@@ -13,10 +15,16 @@ public class QuranAssessmentEngine : MonoBehaviour
     [Header("SherpaONNXUnity (EitanWong)")]
     [SerializeField] private RealtimeSpeechRecognizerComponent realtimeSpeechRecognizer;
 
+    [Header("Android Offline Model")]
+    [SerializeField] private string offlineModelId = "quran-streaming-zipformer2-ctc";
+    [SerializeField] private string offlineModelFileName = "model.int8.onnx";
+
     [Header("Scoring")]
     [SerializeField, Range(0f, 100f)] private float excellentThreshold = 90f;
     [SerializeField, Range(0f, 100f)] private float goodThreshold = 75f;
-    [SerializeField, Min(1f)] private float initializationTimeoutSeconds = 15f;
+    [SerializeField, Min(1f)] private float initializationTimeoutSeconds = 120f;
+
+    private Task<string> startupModelPreparationTask;
 
     public bool IsReady
     {
@@ -27,6 +35,16 @@ public class QuranAssessmentEngine : MonoBehaviour
                    realtimeSpeechRecognizer != null &&
                    realtimeSpeechRecognizer.IsInitialized;
         }
+    }
+
+    private void Start()
+    {
+#if UNITY_ANDROID && !UNITY_EDITOR
+        // All Awake methods have completed at this point. Start preparing the
+        // bundled offline model immediately when the game scene opens.
+        startupModelPreparationTask =
+            PrepareAndroidOfflineModelAndRecognizerAsync();
+#endif
     }
 
     public async Task<QuranAssessmentResult> AssessAsync(
@@ -74,8 +92,19 @@ public class QuranAssessmentEngine : MonoBehaviour
                 "RealtimeSpeechRecognizerComponent is not assigned.");
         }
 
+        string offlineInstallError =
+            await GetOrStartAndroidModelPreparationAsync();
+
+        if (!string.IsNullOrEmpty(offlineInstallError))
+        {
+            return QuranAssessmentResult.Failed(
+                offlineInstallError);
+        }
+
         if (!realtimeSpeechRecognizer.IsInitialized)
+        {
             await InitializeRecognizerAsync();
+        }
 
         if (!realtimeSpeechRecognizer.IsInitialized)
         {
@@ -136,6 +165,178 @@ public class QuranAssessmentEngine : MonoBehaviour
                 // The readiness check below returns the user-facing error.
             }
         }
+    }
+
+    private Task<string> GetOrStartAndroidModelPreparationAsync()
+    {
+#if UNITY_ANDROID && !UNITY_EDITOR
+        if (startupModelPreparationTask == null)
+        {
+            startupModelPreparationTask =
+                PrepareAndroidOfflineModelAndRecognizerAsync();
+        }
+
+        return startupModelPreparationTask;
+#else
+        return Task.FromResult(string.Empty);
+#endif
+    }
+
+    private async Task<string> PrepareAndroidOfflineModelAndRecognizerAsync()
+    {
+#if UNITY_ANDROID && !UNITY_EDITOR
+        if (realtimeSpeechRecognizer == null)
+            return "RealtimeSpeechRecognizerComponent is not assigned.";
+
+        // Awake may have tried to initialize before the model was installed.
+        // Dispose that attempt, install the model, then initialize a clean one.
+        if (!realtimeSpeechRecognizer.IsInitialized)
+            realtimeSpeechRecognizer.DisposeModule();
+
+        string installError =
+            await EnsureAndroidOfflineModelInstalledAsync();
+
+        if (!string.IsNullOrEmpty(installError))
+            return installError;
+
+        if (!realtimeSpeechRecognizer.IsInitialized)
+            await InitializeRecognizerAsync();
+
+        if (!realtimeSpeechRecognizer.IsInitialized)
+            return "Quran phoneme model is not initialized.";
+#endif
+
+        return string.Empty;
+    }
+
+    private async Task<string> EnsureAndroidOfflineModelInstalledAsync()
+    {
+#if UNITY_ANDROID && !UNITY_EDITOR
+        if (string.IsNullOrWhiteSpace(offlineModelId))
+            return "Offline Quran model ID is empty.";
+
+        string relativeDirectory =
+            CombineAsUrl(
+                "sherpa-onnx",
+                "models",
+                "speech-recognition",
+                offlineModelId.Trim());
+
+        string destinationDirectory =
+            Path.Combine(
+                Application.persistentDataPath,
+                "sherpa-onnx",
+                "models",
+                "speech-recognition",
+                offlineModelId.Trim());
+
+        try
+        {
+            Directory.CreateDirectory(destinationDirectory);
+        }
+        catch (Exception ex)
+        {
+            return "Could not create the offline model directory: " + ex.Message;
+        }
+
+        string[] requiredFiles =
+        {
+            offlineModelFileName,
+            "tokens.txt"
+        };
+
+        for (int i = 0; i < requiredFiles.Length; i++)
+        {
+            string fileName = requiredFiles[i];
+
+            if (string.IsNullOrWhiteSpace(fileName))
+                return "An offline model filename is empty.";
+
+            string destinationPath =
+                Path.Combine(destinationDirectory, fileName);
+
+            try
+            {
+                if (File.Exists(destinationPath) &&
+                    new FileInfo(destinationPath).Length > 0)
+                {
+                    continue;
+                }
+            }
+            catch
+            {
+                // Copy the file again when its current state cannot be checked.
+            }
+
+            string sourceUrl =
+                Application.streamingAssetsPath.TrimEnd('/', '\\') +
+                "/" + relativeDirectory +
+                "/" + fileName;
+
+            string temporaryPath = destinationPath + ".download";
+
+            try
+            {
+                if (File.Exists(temporaryPath))
+                    File.Delete(temporaryPath);
+
+                using (UnityWebRequest request =
+                       UnityWebRequest.Get(sourceUrl))
+                {
+                    request.downloadHandler =
+                        new DownloadHandlerFile(temporaryPath, false);
+
+                    UnityWebRequestAsyncOperation operation =
+                        request.SendWebRequest();
+
+                    while (!operation.isDone)
+                        await Task.Yield();
+
+                    if (request.result != UnityWebRequest.Result.Success)
+                    {
+                        if (File.Exists(temporaryPath))
+                            File.Delete(temporaryPath);
+
+                        return
+                            "Offline Quran model could not be copied from the APK. " +
+                            fileName + ": " + request.error;
+                    }
+                }
+
+                if (File.Exists(destinationPath))
+                    File.Delete(destinationPath);
+
+                File.Move(temporaryPath, destinationPath);
+            }
+            catch (Exception ex)
+            {
+                try
+                {
+                    if (File.Exists(temporaryPath))
+                        File.Delete(temporaryPath);
+                }
+                catch
+                {
+                    // Preserve the original installation error.
+                }
+
+                return
+                    "Offline Quran model installation failed for " +
+                    fileName + ": " + ex.Message;
+            }
+        }
+#endif
+
+        return string.Empty;
+    }
+
+    private static string CombineAsUrl(params string[] parts)
+    {
+        return string.Join(
+            "/",
+            Array.ConvertAll(
+                parts,
+                part => (part ?? string.Empty).Trim('/', '\\')));
     }
 
     private void AddNormalizedToken(
