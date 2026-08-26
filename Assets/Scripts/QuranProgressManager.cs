@@ -1,4 +1,4 @@
-
+using UnityEngine;
 
 public static class QuranProgressManager
 {
@@ -196,15 +196,24 @@ public static class QuranProgressManager
         if (verseIndex == 0)
             return true;
 
-        VerseData previousVerse = surah.verses[verseIndex - 1];
+        for (int previousIndex = 0;
+             previousIndex < verseIndex;
+             previousIndex++)
+        {
+            VerseData previousVerse =
+                surah.verses[previousIndex];
 
-        if (previousVerse == null)
-            return false;
+            if (previousVerse == null ||
+                GetBestStars(
+                    surah.number,
+                    previousVerse.number) <
+                StarsRequiredForNextVerse)
+            {
+                return false;
+            }
+        }
 
-        return GetBestStars(
-                   surah.number,
-                   previousVerse.number) >=
-               StarsRequiredForNextVerse;
+        return true;
     }
 
     public static bool IsSurahUnlocked(
