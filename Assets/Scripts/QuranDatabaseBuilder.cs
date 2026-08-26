@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 
 using System;
 using System.Collections.Generic;
@@ -628,3 +629,4 @@ public class QuranDatabaseBuilder : EditorWindow
         } // End switch
     } // End GetSurahPersianName
 } // End QuranDatabaseBuilde
+#endif
