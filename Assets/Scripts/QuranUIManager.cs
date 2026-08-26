@@ -5,40 +5,47 @@ public class QuranUIManager : MonoBehaviour
 {
     public static QuranUIManager Instance { get; private set; }
 
-    [Header("Panels")]
-    [SerializeField] private GameObject mainMenuPanel;
-    [SerializeField] private GameObject quranPanel;
-    [SerializeField] private GameObject versesListPanel;
-    [SerializeField] private GameObject versePanel;
-    [SerializeField] private GameObject settingsPanel;
+    [global::UnityEngine.Header("Panels")]
+    [global::UnityEngine.SerializeField] private GameObject mainMenuPanel;
+    [global::UnityEngine.SerializeField] private GameObject quranPanel;
+    [global::UnityEngine.SerializeField] private GameObject versesListPanel;
+    [global::UnityEngine.SerializeField] private GameObject versePanel;
+    [global::UnityEngine.SerializeField] private GameObject settingsPanel;
 
-    [Header("Surah List")]
-    [SerializeField] private Transform surahContent;
-    [SerializeField] private Button surahButtonPrefab;
+    [global::UnityEngine.Header("Surah List")]
+    [global::UnityEngine.SerializeField] private Transform surahContent;
+    [global::UnityEngine.SerializeField] private Button surahButtonPrefab;
 
-    [Header("Verse List")]
-    [SerializeField] private Transform verseContent;
-    [SerializeField] private Button verseFramePrefab;
-    [SerializeField] private bool autoResizeVerseItems = true;
-    [Tooltip("Height added to the Verse Item background for every wrapped line after the first line.")]
-    [SerializeField, Min(0f)] private float verseItemExtraHeightPerLine = 65f;
+    [global::UnityEngine.Header("Verse List")]
+    [global::UnityEngine.SerializeField] private Transform verseContent;
+    [global::UnityEngine.SerializeField] private Button verseFramePrefab;
+    [global::UnityEngine.SerializeField] private bool autoResizeVerseItems = true;
+    [global::UnityEngine.Tooltip("Height added to the Verse Item background for every wrapped line after the first line.")]
+    [global::UnityEngine.SerializeField, global::UnityEngine.Min(0f)] private float verseItemExtraHeightPerLine = 65f;
 
-    [Header("Arabic Verse Text")]
-    [Tooltip("Removes characters that the selected TMP font and its fallbacks cannot display, so missing glyph squares are not shown.")]
-    [SerializeField] private bool hideUnsupportedVerseCharacters = true;
+    [global::UnityEngine.Header("Arabic Verse Text")]
+    [global::UnityEngine.Tooltip("Removes characters that the selected TMP font and its fallbacks cannot display, so missing glyph squares are not shown.")]
+    [global::UnityEngine.SerializeField] private bool hideUnsupportedVerseCharacters = true;
 
-    [Header("Progress, Stars & Locks")]
-    [Tooltip("Shows earned stars / required stars for the current surah, for example 12/28.")]
-    [SerializeField] private global::RTLTMPro.RTLTextMeshPro surahProgressText;
+    [global::UnityEngine.Header("Progress, Stars & Locks")]
+    [global::UnityEngine.Tooltip("Shows earned stars / required stars for the current surah, for example 12/28.")]
+    [global::UnityEngine.SerializeField] private global::RTLTMPro.RTLTextMeshPro surahProgressText;
 
-    [Tooltip("Assign exactly 6 sprites in order: 0Stars, 1Star, 2Stars, 3Stars, 4Stars, 5Stars.")]
-    [SerializeField] private Sprite[] verseStarSprites = new Sprite[6];
+    [global::UnityEngine.Tooltip("Assign exactly 6 sprites in order: 0Stars, 1Star, 2Stars, 3Stars, 4Stars, 5Stars.")]
+    [global::UnityEngine.SerializeField] private Sprite[] verseStarSprites = new Sprite[6];
 
-    [SerializeField] private Sprite lockSprite;
-    [Tooltip("Single filled star shown beside the surah progress counter.")]
-    [SerializeField] private Sprite progressFilledStarSprite;
-    [SerializeField] private Vector2 verseStarsSize = new Vector2(230f, 50f);
-    [SerializeField] private Vector2 verseStarsOffset = new Vector2(14f, -10f);
+    [global::UnityEngine.SerializeField] private Sprite lockSprite;
+
+    [global::UnityEngine.Header("Locked Item Backgrounds")]
+    [global::UnityEngine.SerializeField]
+    private Sprite lockedSurahBackgroundSprite;
+    [global::UnityEngine.SerializeField]
+    private Sprite lockedVerseBackgroundSprite;
+
+    [global::UnityEngine.Tooltip("Single filled star shown beside the surah progress counter.")]
+    [global::UnityEngine.SerializeField] private Sprite progressFilledStarSprite;
+    [global::UnityEngine.SerializeField] private Vector2 verseStarsSize = new Vector2(230f, 50f);
+    [global::UnityEngine.SerializeField] private Vector2 verseStarsOffset = new Vector2(14f, -10f);
 
     [global::UnityEngine.Header("Surah Lock Layout")]
     [global::UnityEngine.SerializeField]
@@ -54,55 +61,58 @@ public class QuranUIManager : MonoBehaviour
     [global::UnityEngine.SerializeField]
     private Vector2 verseLockOffset = Vector2.zero;
 
-    [SerializeField] private Vector2 progressStarSize = new Vector2(48f, 48f);
-    [SerializeField] private Vector2 progressStarOffset = new Vector2(-8f, 0f);
+    [global::UnityEngine.SerializeField] private Vector2 progressStarSize = new Vector2(48f, 48f);
+    [global::UnityEngine.SerializeField] private Vector2 progressStarOffset = new Vector2(-8f, 0f);
 
-    [Header("Verse Panel")]
-    [SerializeField] private global::RTLTMPro.RTLTextMeshPro verseText;
-    [SerializeField] private global::RTLTMPro.RTLTextMeshPro verseTitle;
-    [SerializeField] private AudioSource audioSource;
-    [SerializeField] private Button playButton;
+    [global::UnityEngine.Header("Verse Panel")]
+    [global::UnityEngine.SerializeField] private global::RTLTMPro.RTLTextMeshPro verseText;
+    [global::UnityEngine.SerializeField] private global::RTLTMPro.RTLTextMeshPro verseTitle;
+    [global::UnityEngine.SerializeField] private AudioSource audioSource;
+    [global::UnityEngine.SerializeField] private Button playButton;
+    [global::UnityEngine.Tooltip("Button that plays the second reciter using the same AudioSource.")]
+    [global::UnityEngine.SerializeField]
+    private Button secondReciterButton;
 
-    [Header("Data")]
-    [SerializeField] private QuranDatabase database;
-    [SerializeField] private QuranJsonRepository quranRepository;
+    [global::UnityEngine.Header("Data")]
+    [global::UnityEngine.SerializeField] private QuranDatabase database;
+    [global::UnityEngine.SerializeField] private QuranJsonRepository quranRepository;
 
-    [Header("Recording & Assessment")]
-    [SerializeField] private QuranRecorder recorder;
-    [SerializeField] private QuranAssessmentEngine assessmentEngine;
-    [SerializeField] private global::RTLTMPro.RTLTextMeshPro percentText;
-    [Tooltip("Shown above the Record button until the speech recognizer is ready.")]
-    [SerializeField] private global::RTLTMPro.RTLTextMeshPro recognizerLoadingText;
-    [Tooltip("Image object containing the Loading text. It is hidden when the recognizer becomes ready.")]
-    [SerializeField] private Image recognizerLoadingBackgroundImage;
+    [global::UnityEngine.Header("Recording & Assessment")]
+    [global::UnityEngine.SerializeField] private QuranRecorder recorder;
+    [global::UnityEngine.SerializeField] private QuranAssessmentEngine assessmentEngine;
+    [global::UnityEngine.SerializeField] private global::RTLTMPro.RTLTextMeshPro percentText;
+    [global::UnityEngine.Tooltip("Shown above the Record button until the speech recognizer is ready.")]
+    [global::UnityEngine.SerializeField] private global::RTLTMPro.RTLTextMeshPro recognizerLoadingText;
+    [global::UnityEngine.Tooltip("Image object containing the Loading text. It is hidden when the recognizer becomes ready.")]
+    [global::UnityEngine.SerializeField] private Image recognizerLoadingBackgroundImage;
 
-    [Header("Settings Panel")]
-    [SerializeField] private Button exitButton;
-    [SerializeField] private Button settingsButton;
-    [SerializeField] private Button settingsBackButton;
-    [SerializeField] private Toggle hapticToggle;
-    [SerializeField] private Toggle buttonSoundToggle;
-    [SerializeField] private Toggle backgroundMusicToggle;
+    [global::UnityEngine.Header("Settings Panel")]
+    [global::UnityEngine.SerializeField] private Button exitButton;
+    [global::UnityEngine.SerializeField] private Button settingsButton;
+    [global::UnityEngine.SerializeField] private Button settingsBackButton;
+    [global::UnityEngine.SerializeField] private Toggle hapticToggle;
+    [global::UnityEngine.SerializeField] private Toggle buttonSoundToggle;
+    [global::UnityEngine.SerializeField] private Toggle backgroundMusicToggle;
 
-    [Header("Record Button Visual")]
-    [Tooltip("Image component on the Record button.")]
-    [SerializeField] private Image recordButtonImage;
-    [Tooltip("Sprite shown only while the microphone is recording.")]
-    [SerializeField] private Sprite recordingButtonSprite;
+    [global::UnityEngine.Header("Record Button Visual")]
+    [global::UnityEngine.Tooltip("Image component on the Record button.")]
+    [global::UnityEngine.SerializeField] private Image recordButtonImage;
+    [global::UnityEngine.Tooltip("Sprite shown only while the microphone is recording.")]
+    [global::UnityEngine.SerializeField] private Sprite recordingButtonSprite;
 
-    [Header("Shared Button Audio")]
-    [Tooltip("One AudioSource shared by every button in this scene.")]
-    [SerializeField] private AudioSource sharedButtonAudioSource;
-    [SerializeField] private AudioClip startButtonSound;
-    [SerializeField] private AudioClip exitAndSettingsButtonSound;
-    [SerializeField] private AudioClip surahButtonSound;
-    [SerializeField] private AudioClip verseButtonSound;
-    [Tooltip("One shared sound for every Back button.")]
-    [SerializeField] private AudioClip backButtonSound;
+    [global::UnityEngine.Header("Shared Button Audio")]
+    [global::UnityEngine.Tooltip("One AudioSource shared by every button in this scene.")]
+    [global::UnityEngine.SerializeField] private AudioSource sharedButtonAudioSource;
+    [global::UnityEngine.SerializeField] private AudioClip startButtonSound;
+    [global::UnityEngine.SerializeField] private AudioClip exitAndSettingsButtonSound;
+    [global::UnityEngine.SerializeField] private AudioClip surahButtonSound;
+    [global::UnityEngine.SerializeField] private AudioClip verseButtonSound;
+    [global::UnityEngine.Tooltip("One shared sound for every Back button.")]
+    [global::UnityEngine.SerializeField] private AudioClip backButtonSound;
 
-    [Header("Background Music")]
-    [SerializeField] private AudioSource backgroundMusicAudioSource;
-    [SerializeField] private AudioClip mainMenuBackgroundMusic;
+    [global::UnityEngine.Header("Background Music")]
+    [global::UnityEngine.SerializeField] private AudioSource backgroundMusicAudioSource;
+    [global::UnityEngine.SerializeField] private AudioClip mainMenuBackgroundMusic;
     [global::UnityEngine.Tooltip("Played in both the Surah List and Verses List panels.")]
     [global::UnityEngine.SerializeField] private AudioClip quranBrowserBackgroundMusic;
 
@@ -119,7 +129,7 @@ public class QuranUIManager : MonoBehaviour
     private int currentSurahIndex = -1;
     private int currentVerseIndex = -1;
     private AudioClip currentVerseAudio;
-    private bool isPlayingVerse;
+    private AudioClip currentSecondReciterAudio;
     private bool isAssessing;
     private Image progressStarImage;
     private Sprite defaultRecordButtonSprite;
@@ -184,6 +194,12 @@ public class QuranUIManager : MonoBehaviour
         {
             playButton.onClick.RemoveAllListeners();
             playButton.onClick.AddListener(ReplayCurrentVerse);
+        }
+
+        if (secondReciterButton != null)
+        {
+            secondReciterButton.onClick.RemoveAllListeners();
+            secondReciterButton.onClick.AddListener(PlaySecondReciter);
         }
     }
 
@@ -530,6 +546,10 @@ public class QuranUIManager : MonoBehaviour
             }
             else
             {
+                ApplyLockedButtonBackground(
+                    button,
+                    lockedSurahBackgroundSprite);
+
                 CreateLockImage(
                     button.transform,
                     surahLockOffset,
@@ -631,6 +651,10 @@ public class QuranUIManager : MonoBehaviour
             }
             else
             {
+                ApplyLockedButtonBackground(
+                    frame,
+                    lockedVerseBackgroundSprite);
+
                 CreateLockImage(
                     frame.transform,
                     verseLockOffset,
@@ -792,6 +816,9 @@ public class QuranUIManager : MonoBehaviour
         currentSurahIndex = surahIndex;
         currentVerseIndex = verseIndex;
         currentVerseAudio = verse.audio;
+        currentSecondReciterAudio = verse.secondReciterAudio;
+
+        UpdateReciterButtonAvailability();
 
         if (verseTitle != null)
         {
@@ -812,7 +839,7 @@ public class QuranUIManager : MonoBehaviour
 
         ResetPercent();
         PlayBackgroundMusic(null);
-        PlayVerseAudio(verse.audio);
+        PlayVerseAudio(currentVerseAudio);
 
         StartCoroutine(
             SwitchPanel(
@@ -916,37 +943,24 @@ public class QuranUIManager : MonoBehaviour
 
     public void ReplayCurrentVerse()
     {
-        if (isPlayingVerse ||
-            currentVerseAudio == null ||
-            audioSource == null)
-        {
-            return;
-        }
-
-        audioSource.Stop();
-        audioSource.clip = currentVerseAudio;
-        audioSource.Play();
-
-        StartCoroutine(WaitForAudioFinish());
+        PlayVerseAudio(currentVerseAudio);
     }
 
-    private global::System.Collections.IEnumerator WaitForAudioFinish()
+    public void PlaySecondReciter()
     {
-        isPlayingVerse = true;
+        PlayVerseAudio(currentSecondReciterAudio);
+    }
 
+    private void UpdateReciterButtonAvailability()
+    {
         if (playButton != null)
-            playButton.interactable = false;
+            playButton.interactable = currentVerseAudio != null;
 
-        while (audioSource != null &&
-               audioSource.isPlaying)
+        if (secondReciterButton != null)
         {
-            yield return null;
+            secondReciterButton.interactable =
+                currentSecondReciterAudio != null;
         }
-
-        isPlayingVerse = false;
-
-        if (playButton != null)
-            playButton.interactable = true;
     }
 
     private void StopAudio()
@@ -1246,6 +1260,39 @@ public class QuranUIManager : MonoBehaviour
             new Vector2(0.5f, 0.5f),
             offset,
             size);
+    }
+
+    private static void ApplyLockedButtonBackground(
+        Button button,
+        Sprite backgroundSprite)
+    {
+        if (button == null)
+            return;
+
+        Image backgroundImage =
+            button.targetGraphic as Image;
+
+        if (backgroundImage == null)
+            backgroundImage = button.GetComponent<Image>();
+
+        // A locked item stays non-interactable, but Unity's disabled
+        // Color Tint must not fade its background.
+        button.transition =
+            global::UnityEngine.UI.Selectable.Transition.None;
+
+        if (backgroundImage != null)
+        {
+            if (backgroundSprite != null)
+                backgroundImage.sprite = backgroundSprite;
+
+            backgroundImage.color = Color.white;
+        }
+
+        CanvasGroup canvasGroup =
+            button.GetComponent<CanvasGroup>();
+
+        if (canvasGroup != null)
+            canvasGroup.alpha = 1f;
     }
 
     private static void CreateRuntimeImage(

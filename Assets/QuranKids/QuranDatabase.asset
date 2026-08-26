@@ -18,58 +18,80 @@ MonoBehaviour:
     namePersian: "\u0633\u0648\u0631\u0647 \u0641\u0627\u062A\u062D\u0647"
     verses:
     - number: 1
-      audio: {fileID: 8300000, guid: 9bc040e647f2c1a4ebeea234f61f204c, type: 3}
+      audio: {fileID: 8300000, guid: f42cd0972f031d343ae1b3570b2fd482, type: 3}
+      secondReciterAudio: {fileID: 8300000, guid: 4bba5cdc30892454a8782133a45a672c, type: 3}
     - number: 2
-      audio: {fileID: 8300000, guid: 4fc37cd5404e5ab41aa0ce7ea619ab93, type: 3}
+      audio: {fileID: 8300000, guid: 65c9db1976217cc4889901b74874fc3a, type: 3}
+      secondReciterAudio: {fileID: 8300000, guid: bfc7e94e5ebd9da4cb71360fee9e0cf9, type: 3}
     - number: 3
-      audio: {fileID: 8300000, guid: c51da621c869fe14cac52d6c7a76570f, type: 3}
+      audio: {fileID: 8300000, guid: a74029da89cd6354497f1103d23a3bdb, type: 3}
+      secondReciterAudio: {fileID: 8300000, guid: f5e6d5814b46ab04c855c588decd53ae, type: 3}
     - number: 4
-      audio: {fileID: 8300000, guid: 814f05b289b6b0442bca495ff4b4c5e1, type: 3}
+      audio: {fileID: 8300000, guid: 0826c96c08d4160409e2687e54f76fd8, type: 3}
+      secondReciterAudio: {fileID: 8300000, guid: 5d06ab94b9f46a3408ffdc01316cc71d, type: 3}
     - number: 5
-      audio: {fileID: 8300000, guid: f091f735c0beab945afcfd212394d720, type: 3}
+      audio: {fileID: 8300000, guid: b90c674557299694eb58a67286b9459e, type: 3}
+      secondReciterAudio: {fileID: 8300000, guid: c94d787a4ae76e045bb6446c5d6e504f, type: 3}
     - number: 6
-      audio: {fileID: 8300000, guid: 2fc1399c1ed0de24caf41950cf6820c7, type: 3}
+      audio: {fileID: 8300000, guid: a3ef0b9d6cc4ae142a38a8d0cd5cf797, type: 3}
+      secondReciterAudio: {fileID: 8300000, guid: 35dac62b57e91b544ae108276f3fea75, type: 3}
     - number: 7
-      audio: {fileID: 8300000, guid: 52520154212dc3f40ad02287f7015401, type: 3}
+      audio: {fileID: 8300000, guid: 909eba92cb63d4a4f913151d157cd464, type: 3}
+      secondReciterAudio: {fileID: 8300000, guid: b840799179e045c469115aa90db2c47b, type: 3}
   - number: 112
     nameArabic: "\u0627\u0644\u0625\u062E\u0644\u0627\u0635"
     namePersian: "\u0633\u0648\u0631\u0647 \u0627\u062E\u0644\u0627\u0635"
     verses:
     - number: 1
       audio: {fileID: 0}
+      secondReciterAudio: {fileID: 0}
     - number: 2
       audio: {fileID: 0}
+      secondReciterAudio: {fileID: 0}
     - number: 3
       audio: {fileID: 0}
+      secondReciterAudio: {fileID: 0}
     - number: 4
       audio: {fileID: 0}
+      secondReciterAudio: {fileID: 0}
   - number: 113
     nameArabic: "\u0627\u0644\u0641\u0644\u0642"
     namePersian: "\u0633\u0648\u0631\u0647 \u0641\u0644\u0642"
     verses:
     - number: 1
       audio: {fileID: 0}
+      secondReciterAudio: {fileID: 0}
     - number: 2
       audio: {fileID: 0}
+      secondReciterAudio: {fileID: 0}
     - number: 3
       audio: {fileID: 0}
+      secondReciterAudio: {fileID: 0}
     - number: 4
       audio: {fileID: 0}
+      secondReciterAudio: {fileID: 0}
     - number: 5
       audio: {fileID: 0}
+      secondReciterAudio: {fileID: 0}
   - number: 114
     nameArabic: "\u0627\u0644\u0646\u0627\u0633"
     namePersian: "\u0633\u0648\u0631\u0647 \u0646\u0627\u0633"
     verses:
     - number: 1
       audio: {fileID: 0}
+      secondReciterAudio: {fileID: 0}
     - number: 2
       audio: {fileID: 0}
+      secondReciterAudio: {fileID: 0}
     - number: 3
       audio: {fileID: 0}
+      secondReciterAudio: {fileID: 0}
     - number: 4
       audio: {fileID: 0}
+      secondReciterAudio: {fileID: 0}
     - number: 5
       audio: {fileID: 0}
+      secondReciterAudio: {fileID: 0}
     - number: 6
       audio: {fileID: 0}
+      secondReciterAudio: {fileID: 0}

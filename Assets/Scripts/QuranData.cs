@@ -20,5 +20,10 @@ public class SurahData
 public class VerseData
 {
     public int number;
+
+    [global::UnityEngine.Tooltip("Audio for the first reciter. This is the existing verse audio.")]
     public AudioClip audio;
+
+    [global::UnityEngine.Tooltip("Audio for the second reciter.")]
+    public AudioClip secondReciterAudio;
 }
