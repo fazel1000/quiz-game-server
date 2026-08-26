@@ -188,6 +188,7 @@ public class QuranUIManager : MonoBehaviour
         if (recorder != null)
             recorder.RecordingFinished += OnRecordingFinished;
 
+        QuranProgressManager.EnsureBismillahVerseMigration(database);
         BuildSurahList();
 
         if (playButton != null)

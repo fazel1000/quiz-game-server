@@ -4,7 +4,12 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "QuranDatabase", menuName = "Quran Kids/Quran Database")]
 public class QuranDatabase : ScriptableObject
 {
+    public const int BismillahAsVerseNumberingVersion = 2;
+
     public SurahData[] surahs;
+
+    [HideInInspector]
+    public int verseNumberingVersion;
 }
 
 [Serializable]

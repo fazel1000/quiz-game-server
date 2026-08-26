@@ -46,13 +46,13 @@ MonoBehaviour:
       audio: {fileID: 0}
       secondReciterAudio: {fileID: 0}
     - number: 2
-      audio: {fileID: 0}
+      audio: {fileID: 8300000, guid: d71fe29baca51c040b2147df89cfa41b, type: 3}
       secondReciterAudio: {fileID: 0}
     - number: 3
-      audio: {fileID: 0}
+      audio: {fileID: 8300000, guid: e97a1b21e2fdafd498498d7637165563, type: 3}
       secondReciterAudio: {fileID: 0}
     - number: 4
-      audio: {fileID: 0}
+      audio: {fileID: 8300000, guid: 430b03489c2e7b74b8fc2c453e4b4868, type: 3}
       secondReciterAudio: {fileID: 0}
   - number: 113
     nameArabic: "\u0627\u0644\u0641\u0644\u0642"
@@ -95,3 +95,4 @@ MonoBehaviour:
     - number: 6
       audio: {fileID: 0}
       secondReciterAudio: {fileID: 0}
+  verseNumberingVersion: 2

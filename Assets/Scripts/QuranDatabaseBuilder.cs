@@ -1,5 +1,3 @@
-#if UNITY_EDITOR
-
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -242,6 +240,12 @@ public class QuranDatabaseBuilder : EditorWindow
             Dictionary<int, SurahData> oldSurahs =
                 BuildExistingSurahMap(database.surahs);
 
+            bool databaseAlreadyUsesBismillahVerses =
+                database.verseNumberingVersion >=
+                QuranDatabase.BismillahAsVerseNumberingVersion;
+
+            Undo.RecordObject(database, "Configure Quran Database");
+
             List<SurahData> newSurahs =
                 new List<SurahData>();
 
@@ -270,6 +274,9 @@ public class QuranDatabaseBuilder : EditorWindow
                 List<VerseData> newVerses =
                     new List<VerseData>();
 
+                Dictionary<int, VerseData> existingVerses =
+                    BuildExistingVerseMap(surah.verses);
+
                 foreach (KeyValuePair<string, QuranVerseJsonData> pair in allVerses)
                 {
                     int parsedSurah;
@@ -286,10 +293,22 @@ public class QuranDatabaseBuilder : EditorWindow
                     if (parsedSurah != surahNumber)
                         continue;
 
-                    VerseData existingVerse =
-                        FindVerse(
-                            surah.verses,
-                            parsedVerse);
+                    int existingVerseNumber = parsedVerse;
+
+                    if (UsesInsertedBismillah(surahNumber) &&
+                        !databaseAlreadyUsesBismillahVerses)
+                    {
+                        existingVerseNumber = parsedVerse - 1;
+                    }
+
+                    VerseData existingVerse = null;
+
+                    if (existingVerseNumber > 0)
+                    {
+                        existingVerses.TryGetValue(
+                            existingVerseNumber,
+                            out existingVerse);
+                    }
 
                     if (existingVerse == null)
                     {
@@ -297,7 +316,8 @@ public class QuranDatabaseBuilder : EditorWindow
                             new VerseData
                             {
                                 number = parsedVerse,
-                                audio = null
+                                audio = null,
+                                secondReciterAudio = null
                             };
                     }
                     else
@@ -331,9 +351,9 @@ public class QuranDatabaseBuilder : EditorWindow
                     return a.number.CompareTo(b.number);
                 });
 
-            Undo.RecordObject(database, "Configure Quran Database");
-
             database.surahs = newSurahs.ToArray();
+            database.verseNumberingVersion =
+                QuranDatabase.BismillahAsVerseNumberingVersion;
 
             EditorUtility.SetDirty(database);
             AssetDatabase.SaveAssets();
@@ -454,23 +474,32 @@ public class QuranDatabaseBuilder : EditorWindow
         };
     }
 
-    private static VerseData FindVerse(
-        VerseData[] verses,
-        int number)
+    private static Dictionary<int, VerseData> BuildExistingVerseMap(
+        VerseData[] verses)
     {
+        Dictionary<int, VerseData> result =
+            new Dictionary<int, VerseData>();
+
         if (verses == null)
-            return null;
+            return result;
 
         for (int i = 0; i < verses.Length; i++)
         {
-            if (verses[i] != null &&
-                verses[i].number == number)
-            {
-                return verses[i];
-            }
+            VerseData verse = verses[i];
+
+            if (verse == null ||
+                result.ContainsKey(verse.number))
+                continue;
+
+            result.Add(verse.number, verse);
         }
 
-        return null;
+        return result;
+    }
+
+    private static bool UsesInsertedBismillah(int surahNumber)
+    {
+        return surahNumber != 1 && surahNumber != 9;
     }
 
     private static bool TryParseKey(
@@ -515,8 +544,6 @@ public class QuranDatabaseBuilder : EditorWindow
             case 113: return "سوره فلق";
             case 114: return "سوره ناس";
             default: return "سوره " + number;
-        }
-    }
-}
-
-#endif
+        } // End switch
+    } // End GetSurahPersianName
+} // End QuranDatabaseBuilder
