@@ -43,7 +43,7 @@ MonoBehaviour:
     namePersian: "\u0633\u0648\u0631\u0647 \u0627\u062E\u0644\u0627\u0635"
     verses:
     - number: 1
-      audio: {fileID: 0}
+      audio: {fileID: 8300000, guid: 98d8c1f688156ce41945d7cb22d0614e, type: 3}
       secondReciterAudio: {fileID: 0}
     - number: 2
       audio: {fileID: 8300000, guid: d71fe29baca51c040b2147df89cfa41b, type: 3}
@@ -53,6 +53,9 @@ MonoBehaviour:
       secondReciterAudio: {fileID: 0}
     - number: 4
       audio: {fileID: 8300000, guid: 430b03489c2e7b74b8fc2c453e4b4868, type: 3}
+      secondReciterAudio: {fileID: 0}
+    - number: 5
+      audio: {fileID: 8300000, guid: 39942bd1cad47864aba44f432618ce53, type: 3}
       secondReciterAudio: {fileID: 0}
   - number: 113
     nameArabic: "\u0627\u0644\u0641\u0644\u0642"
@@ -90,6 +93,9 @@ MonoBehaviour:
       audio: {fileID: 0}
       secondReciterAudio: {fileID: 0}
     - number: 5
+      audio: {fileID: 0}
+      secondReciterAudio: {fileID: 0}
+    - number: 6
       audio: {fileID: 0}
       secondReciterAudio: {fileID: 0}
     - number: 6

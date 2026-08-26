@@ -1,3 +1,4 @@
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -6,6 +7,12 @@ using UnityEngine;
 
 public class QuranDatabaseBuilder : EditorWindow
 {
+    private const string DefaultDatabaseFolder =
+        "Assets/Resources/QuranData";
+
+    private const string DefaultDatabasePath =
+        DefaultDatabaseFolder + "/QuranDatabase.asset";
+
     private QuranDatabase database;
     private TextAsset orderedQuranPhonemesJson;
 
@@ -24,7 +31,7 @@ public class QuranDatabaseBuilder : EditorWindow
         window.TryFindJson();
     }
 
-    [MenuItem("Quran Kids/Configure Four Required Surahs")]
+    [MenuItem("Quran Kids/Create or Rebuild Four Required Surahs")]
     public static void ConfigureRequiredSurahs()
     {
         QuranDatabaseBuilder window =
@@ -33,6 +40,10 @@ public class QuranDatabaseBuilder : EditorWindow
         window.minSize = new Vector2(480f, 520f);
         window.surahNumbers = "1,112,113,114";
         window.TryFindDatabase();
+
+        if (window.database == null)
+            window.CreateDatabaseAsset();
+
         window.TryFindJson();
         window.Import();
     }
@@ -63,6 +74,14 @@ public class QuranDatabaseBuilder : EditorWindow
             orderedQuranPhonemesJson,
             typeof(TextAsset),
             false);
+
+        if (database == null &&
+            GUILayout.Button(
+                "Create QuranDatabase.asset",
+                GUILayout.Height(28f)))
+        {
+            CreateDatabaseAsset();
+        }
 
         EditorGUILayout.Space(6f);
 
@@ -167,6 +186,65 @@ public class QuranDatabaseBuilder : EditorWindow
             AssetDatabase.LoadAssetAtPath<QuranDatabase>(path);
     }
 
+    private bool CreateDatabaseAsset()
+    {
+        EnsureAssetFolder(DefaultDatabaseFolder);
+
+        database =
+            AssetDatabase.LoadAssetAtPath<QuranDatabase>(
+                DefaultDatabasePath);
+
+        if (database == null)
+        {
+            database = CreateInstance<QuranDatabase>();
+            database.surahs = new SurahData[0];
+            database.verseNumberingVersion = 0;
+
+            AssetDatabase.CreateAsset(
+                database,
+                DefaultDatabasePath);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+        }
+
+        if (database == null)
+            return false;
+
+        Selection.activeObject = database;
+        EditorGUIUtility.PingObject(database);
+
+        status =
+            "QuranDatabase.asset created at:\n" +
+            DefaultDatabasePath;
+
+        return true;
+    }
+
+    private static void EnsureAssetFolder(string folderPath)
+    {
+        string[] parts = folderPath.Split('/');
+
+        if (parts.Length == 0)
+            return;
+
+        string currentPath = parts[0];
+
+        for (int i = 1; i < parts.Length; i++)
+        {
+            string nextPath =
+                currentPath + "/" + parts[i];
+
+            if (!AssetDatabase.IsValidFolder(nextPath))
+            {
+                AssetDatabase.CreateFolder(
+                    currentPath,
+                    parts[i]);
+            }
+
+            currentPath = nextPath;
+        }
+    }
+
     private void TryFindJson()
     {
         if (orderedQuranPhonemesJson != null)
@@ -191,11 +269,14 @@ public class QuranDatabaseBuilder : EditorWindow
 
         if (database == null)
         {
-            EditorUtility.DisplayDialog(
-                "Quran Database",
-                "QuranDatabase.asset was not found.",
-                "OK");
-            return;
+            if (!CreateDatabaseAsset())
+            {
+                EditorUtility.DisplayDialog(
+                    "Quran Database",
+                    "QuranDatabase.asset could not be created.",
+                    "OK");
+                return;
+            }
         }
 
         if (orderedQuranPhonemesJson == null)
@@ -546,4 +627,4 @@ public class QuranDatabaseBuilder : EditorWindow
             default: return "سوره " + number;
         } // End switch
     } // End GetSurahPersianName
-} // End QuranDatabaseBuilder
+} // End QuranDatabaseBuilde
