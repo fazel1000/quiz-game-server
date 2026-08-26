@@ -10,6 +10,7 @@ public class QuranUIManager : MonoBehaviour
     [SerializeField] private GameObject quranPanel;
     [SerializeField] private GameObject versesListPanel;
     [SerializeField] private GameObject versePanel;
+    [SerializeField] private GameObject settingsPanel;
 
     [Header("Surah List")]
     [SerializeField] private Transform surahContent;
@@ -18,6 +19,9 @@ public class QuranUIManager : MonoBehaviour
     [Header("Verse List")]
     [SerializeField] private Transform verseContent;
     [SerializeField] private Button verseFramePrefab;
+    [SerializeField] private bool autoResizeVerseItems = true;
+    [Tooltip("Height added to the Verse Item background for every wrapped line after the first line.")]
+    [SerializeField, Min(0f)] private float verseItemExtraHeightPerLine = 65f;
 
     [Header("Arabic Verse Text")]
     [Tooltip("Removes characters that the selected TMP font and its fallbacks cannot display, so missing glyph squares are not shown.")]
@@ -35,7 +39,21 @@ public class QuranUIManager : MonoBehaviour
     [SerializeField] private Sprite progressFilledStarSprite;
     [SerializeField] private Vector2 verseStarsSize = new Vector2(230f, 50f);
     [SerializeField] private Vector2 verseStarsOffset = new Vector2(14f, -10f);
-    [SerializeField] private Vector2 lockSize = new Vector2(82f, 82f);
+
+    [global::UnityEngine.Header("Surah Lock Layout")]
+    [global::UnityEngine.SerializeField]
+    private Vector2 surahLockSize = new Vector2(82f, 82f);
+    [global::UnityEngine.SerializeField]
+    private Vector2 surahLockOffset = Vector2.zero;
+
+    [global::UnityEngine.Header("Verse Lock Layout")]
+    [global::UnityEngine.Serialization.FormerlySerializedAs("lockSize")]
+    [global::UnityEngine.SerializeField]
+    private Vector2 verseLockSize = new Vector2(82f, 82f);
+    [global::UnityEngine.Serialization.FormerlySerializedAs("lockOffset")]
+    [global::UnityEngine.SerializeField]
+    private Vector2 verseLockOffset = Vector2.zero;
+
     [SerializeField] private Vector2 progressStarSize = new Vector2(48f, 48f);
     [SerializeField] private Vector2 progressStarOffset = new Vector2(-8f, 0f);
 
@@ -58,6 +76,14 @@ public class QuranUIManager : MonoBehaviour
     [Tooltip("Image object containing the Loading text. It is hidden when the recognizer becomes ready.")]
     [SerializeField] private Image recognizerLoadingBackgroundImage;
 
+    [Header("Settings Panel")]
+    [SerializeField] private Button exitButton;
+    [SerializeField] private Button settingsButton;
+    [SerializeField] private Button settingsBackButton;
+    [SerializeField] private Toggle hapticToggle;
+    [SerializeField] private Toggle buttonSoundToggle;
+    [SerializeField] private Toggle backgroundMusicToggle;
+
     [Header("Record Button Visual")]
     [Tooltip("Image component on the Record button.")]
     [SerializeField] private Image recordButtonImage;
@@ -74,13 +100,21 @@ public class QuranUIManager : MonoBehaviour
     [Tooltip("One shared sound for every Back button.")]
     [SerializeField] private AudioClip backButtonSound;
 
-    [Header("Transition")]
-    [SerializeField, Min(0.05f)] private float transitionDuration = 0.25f;
+    [Header("Background Music")]
+    [SerializeField] private AudioSource backgroundMusicAudioSource;
+    [SerializeField] private AudioClip mainMenuBackgroundMusic;
+    [global::UnityEngine.Tooltip("Played in both the Surah List and Verses List panels.")]
+    [global::UnityEngine.SerializeField] private AudioClip quranBrowserBackgroundMusic;
+
+    [global::UnityEngine.Header("Transition")]
+    [global::UnityEngine.SerializeField, global::UnityEngine.Min(0.05f)]
+    private float transitionDuration = 0.25f;
 
     private CanvasGroup mainGroup;
     private CanvasGroup quranGroup;
     private CanvasGroup versesGroup;
     private CanvasGroup verseGroup;
+    private CanvasGroup settingsGroup;
 
     private int currentSurahIndex = -1;
     private int currentVerseIndex = -1;
@@ -90,15 +124,32 @@ public class QuranUIManager : MonoBehaviour
     private Image progressStarImage;
     private Sprite defaultRecordButtonSprite;
     private Button recordButton;
+    private bool hapticFeedbackEnabled = true;
+    private bool buttonSoundsEnabled = true;
+    private bool backgroundMusicEnabled = true;
+
+    private const string HapticEnabledKey =
+        "Quran.Settings.HapticEnabled";
+    private const string ButtonSoundEnabledKey =
+        "Quran.Settings.ButtonSoundEnabled";
+    private const string BackgroundMusicEnabledKey =
+        "Quran.Settings.BackgroundMusicEnabled";
+
+    public bool HapticFeedbackEnabled
+    {
+        get { return hapticFeedbackEnabled; }
+    }
 
     private void Awake()
     {
         Instance = this;
+        LoadSavedSettings();
 
         mainGroup = PrepareGroup(mainMenuPanel);
         quranGroup = PrepareGroup(quranPanel);
         versesGroup = PrepareGroup(versesListPanel);
         verseGroup = PrepareGroup(versePanel);
+        settingsGroup = PrepareGroup(settingsPanel);
 
         if (recordButtonImage != null)
         {
@@ -116,6 +167,10 @@ public class QuranUIManager : MonoBehaviour
         HideInstant(quranPanel, quranGroup);
         HideInstant(versesListPanel, versesGroup);
         HideInstant(versePanel, verseGroup);
+        HideInstant(settingsPanel, settingsGroup);
+
+        BindSettingsControls();
+        PlayBackgroundMusic(mainMenuBackgroundMusic);
 
         if (quranRepository != null && !quranRepository.IsReady)
             quranRepository.Initialize();
@@ -134,6 +189,8 @@ public class QuranUIManager : MonoBehaviour
 
     private void OnDestroy()
     {
+        UnbindSettingsControls();
+
         if (recorder != null)
             recorder.RecordingFinished -= OnRecordingFinished;
 
@@ -144,8 +201,11 @@ public class QuranUIManager : MonoBehaviour
     public void PlayButtonSound(
         QuranButtonFeedback.ButtonSoundType soundType)
     {
-        if (sharedButtonAudioSource == null)
+        if (!buttonSoundsEnabled ||
+            sharedButtonAudioSource == null)
+        {
             return;
+        }
 
         AudioClip clip = null;
 
@@ -176,9 +236,197 @@ public class QuranUIManager : MonoBehaviour
             sharedButtonAudioSource.PlayOneShot(clip);
     }
 
+    private void LoadSavedSettings()
+    {
+        hapticFeedbackEnabled =
+            PlayerPrefs.GetInt(HapticEnabledKey, 1) == 1;
+
+        buttonSoundsEnabled =
+            PlayerPrefs.GetInt(ButtonSoundEnabledKey, 1) == 1;
+
+        backgroundMusicEnabled =
+            PlayerPrefs.GetInt(BackgroundMusicEnabledKey, 1) == 1;
+    }
+
+    private void BindSettingsControls()
+    {
+        if (exitButton != null)
+            exitButton.onClick.AddListener(ExitGame);
+
+        if (settingsButton != null)
+            settingsButton.onClick.AddListener(OpenSettingsPanel);
+
+        if (settingsBackButton != null)
+            settingsBackButton.onClick.AddListener(CloseSettingsPanel);
+
+        if (hapticToggle != null)
+        {
+            hapticToggle.SetIsOnWithoutNotify(
+                hapticFeedbackEnabled);
+            hapticToggle.onValueChanged.AddListener(
+                SetHapticFeedbackEnabled);
+        }
+
+        if (buttonSoundToggle != null)
+        {
+            buttonSoundToggle.SetIsOnWithoutNotify(
+                buttonSoundsEnabled);
+            buttonSoundToggle.onValueChanged.AddListener(
+                SetButtonSoundsEnabled);
+        }
+
+        if (backgroundMusicToggle != null)
+        {
+            backgroundMusicToggle.SetIsOnWithoutNotify(
+                backgroundMusicEnabled);
+            backgroundMusicToggle.onValueChanged.AddListener(
+                SetBackgroundMusicEnabled);
+        }
+    }
+
+    private void UnbindSettingsControls()
+    {
+        if (exitButton != null)
+            exitButton.onClick.RemoveListener(ExitGame);
+
+        if (settingsButton != null)
+            settingsButton.onClick.RemoveListener(OpenSettingsPanel);
+
+        if (settingsBackButton != null)
+            settingsBackButton.onClick.RemoveListener(CloseSettingsPanel);
+
+        if (hapticToggle != null)
+        {
+            hapticToggle.onValueChanged.RemoveListener(
+                SetHapticFeedbackEnabled);
+        }
+
+        if (buttonSoundToggle != null)
+        {
+            buttonSoundToggle.onValueChanged.RemoveListener(
+                SetButtonSoundsEnabled);
+        }
+
+        if (backgroundMusicToggle != null)
+        {
+            backgroundMusicToggle.onValueChanged.RemoveListener(
+                SetBackgroundMusicEnabled);
+        }
+    }
+
+    public void SetHapticFeedbackEnabled(bool enabled)
+    {
+        hapticFeedbackEnabled = enabled;
+        PlayerPrefs.SetInt(
+            HapticEnabledKey,
+            enabled ? 1 : 0);
+        PlayerPrefs.Save();
+    }
+
+    public void SetButtonSoundsEnabled(bool enabled)
+    {
+        buttonSoundsEnabled = enabled;
+        PlayerPrefs.SetInt(
+            ButtonSoundEnabledKey,
+            enabled ? 1 : 0);
+        PlayerPrefs.Save();
+    }
+
+    public void SetBackgroundMusicEnabled(bool enabled)
+    {
+        backgroundMusicEnabled = enabled;
+        PlayerPrefs.SetInt(
+            BackgroundMusicEnabledKey,
+            enabled ? 1 : 0);
+        PlayerPrefs.Save();
+
+        if (enabled)
+            RefreshBackgroundMusicForCurrentPanel();
+        else if (backgroundMusicAudioSource != null)
+            backgroundMusicAudioSource.Stop();
+    }
+
+    public void OpenSettingsPanel()
+    {
+        PlayBackgroundMusic(mainMenuBackgroundMusic);
+
+        StartCoroutine(
+            SwitchPanel(
+                mainMenuPanel,
+                mainGroup,
+                settingsPanel,
+                settingsGroup));
+    }
+
+    public void CloseSettingsPanel()
+    {
+        PlayBackgroundMusic(mainMenuBackgroundMusic);
+
+        StartCoroutine(
+            SwitchPanel(
+                settingsPanel,
+                settingsGroup,
+                mainMenuPanel,
+                mainGroup));
+    }
+
+    public void ExitGame()
+    {
+        PlayerPrefs.Save();
+
+#if UNITY_EDITOR
+        global::UnityEditor.EditorApplication.isPlaying = false;
+#else
+        Application.Quit();
+#endif
+    }
+
+    private void PlayBackgroundMusic(AudioClip clip)
+    {
+        if (backgroundMusicAudioSource == null)
+            return;
+
+        backgroundMusicAudioSource.loop = true;
+
+        if (!backgroundMusicEnabled || clip == null)
+        {
+            backgroundMusicAudioSource.Stop();
+            return;
+        }
+
+        if (backgroundMusicAudioSource.clip == clip &&
+            backgroundMusicAudioSource.isPlaying)
+        {
+            return;
+        }
+
+        backgroundMusicAudioSource.Stop();
+        backgroundMusicAudioSource.clip = clip;
+        backgroundMusicAudioSource.Play();
+    }
+
+    private void RefreshBackgroundMusicForCurrentPanel()
+    {
+        if (versePanel != null && versePanel.activeSelf)
+        {
+            PlayBackgroundMusic(null);
+            return;
+        }
+
+        if ((quranPanel != null && quranPanel.activeSelf) ||
+            (versesListPanel != null && versesListPanel.activeSelf))
+        {
+            PlayBackgroundMusic(quranBrowserBackgroundMusic);
+            return;
+        }
+
+        PlayBackgroundMusic(mainMenuBackgroundMusic);
+    }
+
     public void OpenQuranPanel()
     {
         BuildSurahList();
+        PlayBackgroundMusic(quranBrowserBackgroundMusic);
 
         StartCoroutine(
             SwitchPanel(
@@ -191,6 +439,7 @@ public class QuranUIManager : MonoBehaviour
     public void BackToMainMenu()
     {
         StopAudio();
+        PlayBackgroundMusic(mainMenuBackgroundMusic);
 
         StartCoroutine(
             SwitchPanel(
@@ -204,6 +453,7 @@ public class QuranUIManager : MonoBehaviour
     {
         StopAudio();
         BuildSurahList();
+        PlayBackgroundMusic(quranBrowserBackgroundMusic);
 
         StartCoroutine(
             SwitchPanel(
@@ -216,6 +466,7 @@ public class QuranUIManager : MonoBehaviour
     public void BackToVerseList()
     {
         StopAudio();
+        PlayBackgroundMusic(quranBrowserBackgroundMusic);
 
         if (database != null &&
             database.surahs != null &&
@@ -279,7 +530,10 @@ public class QuranUIManager : MonoBehaviour
             }
             else
             {
-                CreateLockImage(button.transform);
+                CreateLockImage(
+                    button.transform,
+                    surahLockOffset,
+                    surahLockSize);
             }
         }
     }
@@ -301,6 +555,7 @@ public class QuranUIManager : MonoBehaviour
         currentVerseIndex = -1;
 
         BuildVerseList(database.surahs[index]);
+        PlayBackgroundMusic(quranBrowserBackgroundMusic);
 
         StartCoroutine(
             SwitchPanel(
@@ -376,8 +631,131 @@ public class QuranUIManager : MonoBehaviour
             }
             else
             {
-                CreateLockImage(frame.transform);
+                CreateLockImage(
+                    frame.transform,
+                    verseLockOffset,
+                    verseLockSize);
             }
+        }
+
+        if (autoResizeVerseItems)
+            StartCoroutine(ResizeVerseItemsAfterLayout());
+    }
+
+    private global::System.Collections.IEnumerator
+        ResizeVerseItemsAfterLayout()
+    {
+        yield return null;
+
+        if (verseContent == null ||
+            verseFramePrefab == null)
+        {
+            yield break;
+        }
+
+        Canvas.ForceUpdateCanvases();
+
+        RectTransform prefabRect =
+            verseFramePrefab.transform as RectTransform;
+
+        float baseHeight = prefabRect != null
+            ? Mathf.Max(
+                prefabRect.rect.height,
+                prefabRect.sizeDelta.y)
+            : 0f;
+
+        global::RTLTMPro.RTLTextMeshPro prefabText =
+            verseFramePrefab.GetComponentInChildren<
+                global::RTLTMPro.RTLTextMeshPro>(true);
+
+        float baseTextHeight = prefabText != null
+            ? Mathf.Max(
+                prefabText.rectTransform.rect.height,
+                prefabText.rectTransform.sizeDelta.y)
+            : 0f;
+
+        for (int i = 0;
+             i < verseContent.childCount;
+             i++)
+        {
+            Transform itemTransform =
+                verseContent.GetChild(i);
+
+            Button frame =
+                itemTransform.GetComponent<Button>();
+
+            global::RTLTMPro.RTLTextMeshPro text =
+                itemTransform.GetComponentInChildren<
+                    global::RTLTMPro.RTLTextMeshPro>(true);
+
+            RectTransform frameRect =
+                itemTransform as RectTransform;
+
+            if (frame == null ||
+                text == null ||
+                frameRect == null)
+            {
+                continue;
+            }
+
+            global::UnityEngine.UI.LayoutRebuilder
+                .ForceRebuildLayoutImmediate(text.rectTransform);
+
+            text.ForceMeshUpdate();
+
+            int lineCount = Mathf.Max(
+                1,
+                text.textInfo.lineCount);
+
+            float originalHeight = baseHeight > 0f
+                ? baseHeight
+                : Mathf.Max(
+                    frameRect.rect.height,
+                    frameRect.sizeDelta.y);
+
+            float extraHeight =
+                (lineCount - 1) *
+                verseItemExtraHeightPerLine;
+
+            float targetHeight =
+                originalHeight + extraHeight;
+
+            LayoutElement layoutElement =
+                frame.GetComponent<LayoutElement>();
+
+            if (layoutElement == null)
+                layoutElement = frame.gameObject.AddComponent<LayoutElement>();
+
+            layoutElement.minHeight = targetHeight;
+            layoutElement.preferredHeight = targetHeight;
+
+            frameRect.SetSizeWithCurrentAnchors(
+                RectTransform.Axis.Vertical,
+                targetHeight);
+
+            RectTransform textRect = text.rectTransform;
+
+            if (extraHeight > 0f &&
+                Mathf.Approximately(
+                    textRect.anchorMin.y,
+                    textRect.anchorMax.y))
+            {
+                textRect.SetSizeWithCurrentAnchors(
+                    RectTransform.Axis.Vertical,
+                    (baseTextHeight > 0f
+                        ? baseTextHeight
+                        : textRect.rect.height) +
+                    extraHeight);
+            }
+        }
+
+        RectTransform contentRect =
+            verseContent as RectTransform;
+
+        if (contentRect != null)
+        {
+            global::UnityEngine.UI.LayoutRebuilder
+                .ForceRebuildLayoutImmediate(contentRect);
         }
     }
 
@@ -433,6 +811,7 @@ public class QuranUIManager : MonoBehaviour
         }
 
         ResetPercent();
+        PlayBackgroundMusic(null);
         PlayVerseAudio(verse.audio);
 
         StartCoroutine(
@@ -852,7 +1231,10 @@ public class QuranUIManager : MonoBehaviour
             verseStarsSize);
     }
 
-    private void CreateLockImage(Transform parent)
+    private void CreateLockImage(
+        Transform parent,
+        Vector2 offset,
+        Vector2 size)
     {
         if (parent == null || lockSprite == null)
             return;
@@ -862,8 +1244,8 @@ public class QuranUIManager : MonoBehaviour
             "Lock",
             lockSprite,
             new Vector2(0.5f, 0.5f),
-            Vector2.zero,
-            lockSize);
+            offset,
+            size);
     }
 
     private static void CreateRuntimeImage(

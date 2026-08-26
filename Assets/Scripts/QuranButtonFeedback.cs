@@ -153,6 +153,12 @@ public sealed class QuranButtonFeedback : MonoBehaviour,
 
     private void PlayHaptic()
     {
+        if (QuranUIManager.Instance != null &&
+            !QuranUIManager.Instance.HapticFeedbackEnabled)
+        {
+            return;
+        }
+
 #if UNITY_ANDROID || UNITY_IOS
         switch (hapticStrength)
         {
